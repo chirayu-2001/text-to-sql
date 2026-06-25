@@ -1,0 +1,3043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Text-to-SQL Platform</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --text-color: #94a3b8;
+            --heading-color: #f8fafc;
+            --link-color: #38bdf8;
+            --border-color: #1e293b;
+            --code-bg: #111827;
+            --code-text: #e2e8f0;
+            --card-bg: #151e2e;
+            --accent: #818cf8;
+            --accent-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.8;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            font-size: 16px;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 0%, rgba(129, 140, 248, 0.1) 0%, rgba(11, 15, 25, 0) 50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            padding: 4rem 2rem;
+            margin: 0 auto;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--heading-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+        h1 {
+            font-size: 3rem;
+            letter-spacing: -0.03em;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 1em;
+            margin-bottom: 1.5em;
+            text-align: center;
+        }
+        h2 { 
+            font-size: 1.8rem; 
+            border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 0.5rem; 
+            position: relative;
+        }
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 50px;
+            height: 2px;
+            background: var(--accent-gradient);
+        }
+        h3 { font-size: 1.4rem; color: #e2e8f0; }
+        p { margin-bottom: 1.5em; }
+        a { color: var(--link-color); text-decoration: none; transition: all 0.2s ease; border-bottom: 1px solid transparent; }
+        a:hover { color: #7dd3fc; border-bottom-color: #7dd3fc; }
+        code, pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+        p > code, li > code, td > code {
+            background-color: rgba(30, 41, 59, 0.8);
+            color: #cbd5e1;
+            padding: 0.2em 0.4em;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        pre {
+            background-color: var(--code-bg) !important;
+            padding: 1.5rem !important;
+            border-radius: 12px !important;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            margin: 2rem 0;
+        }
+        blockquote {
+            border-left: 4px solid var(--accent);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            color: #cbd5e1;
+            font-style: italic;
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0) 100%);
+            border-radius: 0 12px 12px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 2rem 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        th, td {
+            padding: 1.25rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: #e2e8f0;
+        }
+        th {
+            background-color: rgba(15, 23, 42, 0.95);
+            font-weight: 600;
+            color: var(--heading-color);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: rgba(30, 41, 59, 0.7); }
+        ul, ol { margin-bottom: 1.5em; padding-left: 1.5rem; }
+        li { margin-bottom: 0.75em; }
+        hr {
+            border: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+            margin: 4rem 0;
+        }
+        .mermaid {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin: 2rem 0;
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        html { scroll-behavior: smooth; }
+        .toc {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 2rem 2rem 2rem 3.5rem;
+            border-radius: 12px;
+            margin-top: 1.5rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .toc li { margin-bottom: 0.8rem; color: #818cf8; }
+        .toc li a {
+            color: #cbd5e1;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        .toc li a:hover {
+            color: #fff;
+            transform: translateX(5px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Agentic Text-to-SQL Platform: Production-Grade System Design</h1>
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#1-high-level-system-architecture">High-Level System Architecture</a></li>
+<li><a href="#2-agentic-workflow">Agentic Workflow</a></li>
+<li><a href="#3-langgraph-architecture">LangGraph Architecture</a></li>
+<li><a href="#4-end-to-end-request-lifecycle">End-to-End Request Lifecycle</a></li>
+<li><a href="#5-metadata-strategy">Metadata Strategy</a></li>
+<li><a href="#6-retrieval-strategy">Retrieval Strategy</a></li>
+<li><a href="#7-sql-generation-strategy">SQL Generation Strategy</a></li>
+<li><a href="#8-security--enterprise-guardrails">Security &amp; Enterprise Guardrails</a></li>
+<li><a href="#9-failure-scenarios">Failure Scenarios</a></li>
+<li><a href="#10-scalability">Scalability</a></li>
+<li><a href="#11-observability">Observability</a></li>
+<li><a href="#12-workspace-strategy">Workspace Strategy</a></li>
+<li><a href="#13-evaluation--testing-strategy">Evaluation &amp; Testing Strategy</a></li>
+<li><a href="#14-architecture-decisions">Architecture Decisions</a></li>
+</ol>
+<hr>
+<h2>1. High-Level System Architecture</h2>
+<h3>Architecture Diagram</h3>
+<pre><code class="language-mermaid">graph TB
+    subgraph Clients
+        UI[Web UI]
+        API_CLIENT[API / SDKs]
+        SLACK[Slack / Teams]
+    end
+
+    subgraph Gateway
+        GW[API Gateway]
+        AUTH[Auth - OAuth2/OIDC]
+    end
+
+    subgraph Backend
+        ORCH[Orchestration - FastAPI]
+        CACHE_SVC[Cache - Redis]
+    end
+
+    subgraph Agents
+        LG[LangGraph Runtime]
+        INTENT[Intent Agent]
+        SCHEMA[Schema Agent]
+        SQL_GEN[SQL Generator]
+        VALIDATOR[Validator]
+        EXECUTOR[Executor]
+        FORMATTER[Formatter]
+    end
+
+    subgraph LLM
+        LLM_GW[LLM Gateway]
+    end
+
+    subgraph Knowledge
+        VS[Vector Store]
+        META_DB[Metadata Store]
+        BG[Business Glossary]
+    end
+
+    subgraph Execution
+        PROXY[Read-Only Proxy]
+        DW[Data Warehouses]
+    end
+
+    subgraph Security
+        RBAC_SVC[RBAC/ABAC Engine]
+        GUARD[Guardrails + PII]
+    end
+
+    subgraph Observability
+        TRACE[Tracing + Metrics]
+        AUDIT[Audit Log]
+    end
+
+    UI &amp; API_CLIENT &amp; SLACK --&gt; GW --&gt; AUTH --&gt; ORCH
+    ORCH --&gt; CACHE_SVC
+    ORCH --&gt; LG
+    LG --&gt; INTENT --&gt; SCHEMA --&gt; SQL_GEN --&gt; VALIDATOR --&gt; EXECUTOR --&gt; FORMATTER
+    INTENT &amp; SCHEMA &amp; SQL_GEN --&gt; LLM_GW
+    SCHEMA --&gt; VS &amp; META_DB &amp; BG
+    EXECUTOR --&gt; PROXY --&gt; DW
+    ORCH --&gt; RBAC_SVC
+    VALIDATOR --&gt; GUARD
+    LG --&gt; TRACE
+    ORCH --&gt; AUDIT
+</code></pre>
+<h3>Component Responsibilities</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>API Gateway</strong></td>
+<td>TLS termination, request routing, protocol translation, initial rate limiting</td>
+</tr>
+<tr>
+<td><strong>Auth Service</strong></td>
+<td>OAuth2/OIDC token validation, user identity resolution, session management</td>
+</tr>
+<tr>
+<td><strong>Rate Limiter</strong></td>
+<td>Per-user and per-org request throttling using token bucket algorithm</td>
+</tr>
+<tr>
+<td><strong>Orchestration Service</strong></td>
+<td>Entry point for all queries; manages request lifecycle, invokes LangGraph, returns responses</td>
+</tr>
+<tr>
+<td><strong>Conversation Manager</strong></td>
+<td>Maintains multi-turn conversation state, resolves coreferences (&quot;those customers&quot; → previous result set)</td>
+</tr>
+<tr>
+<td><strong>Cache Service</strong></td>
+<td>Two-tier cache: (1) semantic cache for similar NL queries, (2) exact-match cache for repeated SQL results</td>
+</tr>
+<tr>
+<td><strong>LangGraph Runtime</strong></td>
+<td>Executes the agentic workflow as a stateful graph; handles branching, retries, and checkpointing</td>
+</tr>
+<tr>
+<td><strong>Checkpoint Store</strong></td>
+<td>Persists LangGraph state for resumability, debugging, and human-in-the-loop interrupts</td>
+</tr>
+<tr>
+<td><strong>LLM Gateway</strong></td>
+<td>Routes LLM calls with load balancing, fallback, retry, token tracking, and model selection</td>
+</tr>
+<tr>
+<td><strong>Vector Store</strong></td>
+<td>Stores embeddings of table/column descriptions, business terms, and past queries for semantic retrieval</td>
+</tr>
+<tr>
+<td><strong>Metadata Store</strong></td>
+<td>Relational store for schema metadata: tables, columns, relationships, statistics, lineage</td>
+</tr>
+<tr>
+<td><strong>Business Glossary</strong></td>
+<td>Maps business terms (&quot;revenue&quot;, &quot;active user&quot;, &quot;churn&quot;) to precise SQL definitions</td>
+</tr>
+<tr>
+<td><strong>Query History Store</strong></td>
+<td>Stores past NL→SQL pairs with feedback scores for few-shot retrieval and fine-tuning</td>
+</tr>
+<tr>
+<td><strong>Embedding Service</strong></td>
+<td>Generates embeddings for metadata, queries, and business terms</td>
+</tr>
+<tr>
+<td><strong>Query Proxy</strong></td>
+<td>Enforces read-only access; rewrites or rejects mutating statements</td>
+</tr>
+<tr>
+<td><strong>Query Governor</strong></td>
+<td>Enforces cost estimates, row limits, timeout thresholds; kills expensive queries</td>
+</tr>
+<tr>
+<td><strong>Connection Pool</strong></td>
+<td>Manages warehouse connections per tenant/database with credential rotation</td>
+</tr>
+<tr>
+<td><strong>RBAC/ABAC Engine</strong></td>
+<td>Evaluates user permissions against tables, columns, and row-level policies</td>
+</tr>
+<tr>
+<td><strong>PII Detector</strong></td>
+<td>Scans query results for PII (SSN, email, phone) before returning to user</td>
+</tr>
+<tr>
+<td><strong>Data Masking Service</strong></td>
+<td>Applies masking rules (redact, hash, truncate) to sensitive columns in results</td>
+</tr>
+<tr>
+<td><strong>Guardrail Service</strong></td>
+<td>Detects prompt injection, jailbreak attempts, and dangerous SQL patterns</td>
+</tr>
+<tr>
+<td><strong>Distributed Tracing</strong></td>
+<td>End-to-end trace across all agents and services via OpenTelemetry</td>
+</tr>
+<tr>
+<td><strong>Audit Log</strong></td>
+<td>Immutable, append-only log of every query, SQL generated, results returned, and who accessed what</td>
+</tr>
+<tr>
+<td><strong>Feedback Service</strong></td>
+<td>Collects thumbs-up/down, corrections, and preferred SQL from users</td>
+</tr>
+<tr>
+<td><strong>Schema Sync Worker</strong></td>
+<td>Periodically syncs warehouse schemas into metadata store and re-indexes embeddings</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>2. Agentic Workflow</h2>
+<h3>Why an Agentic Architecture?</h3>
+<p>Text-to-SQL over 1000+ tables is not a single-prompt problem. It requires:</p>
+<ul>
+<li><strong>Staged reasoning</strong>: Each step (understanding intent, finding tables, generating SQL) requires different context and skills.</li>
+<li><strong>Conditional branching</strong>: Ambiguous queries need clarification; invalid SQL needs repair; expensive queries need approval.</li>
+<li><strong>Separation of concerns</strong>: Security checks, SQL generation, and result formatting have fundamentally different failure modes and should be independently testable.</li>
+<li><strong>Controlled context windows</strong>: With 1000+ tables, the LLM cannot see everything at once. Each agent operates on a focused subset.</li>
+</ul>
+<h3>Agent Roster</h3>
+<pre><code class="language-mermaid">graph LR
+    subgraph &quot;Agentic Pipeline&quot;
+        A[Intent&lt;br/&gt;Agent] --&gt; B[Schema&lt;br/&gt;Agent]
+        B --&gt; C[SQL Generator&lt;br/&gt;Agent]
+        C --&gt; D[Validator&lt;br/&gt;Agent]
+        D --&gt;|Invalid| C
+        D --&gt;|Valid| E[Executor&lt;br/&gt;Agent]
+        E --&gt; F[Formatter&lt;br/&gt;Agent]
+    end
+
+    A -.-&gt;|Ambiguous| HITL[Human-in-the-Loop&lt;br/&gt;Clarification]
+    HITL -.-&gt; A
+    D -.-&gt;|Dangerous| APPROVAL[Admin Approval]
+    APPROVAL -.-&gt; E
+    E -.-&gt;|Expensive| APPROVAL
+</code></pre>
+<h3>Agent Details</h3>
+<h4>Agent 1: Intent Agent</h4>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Purpose</strong></td>
+<td>Understand the user&#39;s natural language question, resolve ambiguity, classify intent, and extract key entities</td>
+</tr>
+<tr>
+<td><strong>Inputs</strong></td>
+<td>User&#39;s NL query, conversation history, user profile (role, department, default database)</td>
+</tr>
+<tr>
+<td><strong>Outputs</strong></td>
+<td>Structured intent object: <code>{ intent_type, entities, time_range, filters, aggregations, sort_order, ambiguities, domain }</code></td>
+</tr>
+<tr>
+<td><strong>Internal Reasoning</strong></td>
+<td>Classify query type (analytical, lookup, comparison, trend). Extract temporal references and resolve relative dates (&quot;last 3 years&quot; → 2023-2026). Detect ambiguity and determine if clarification is needed.</td>
+</tr>
+<tr>
+<td><strong>Tools</strong></td>
+<td>Business Glossary Lookup, Query History Search (for similar past queries), Conversation History</td>
+</tr>
+<tr>
+<td><strong>Has Access To</strong></td>
+<td>Business glossary, conversation history, user profile, query history</td>
+</tr>
+<tr>
+<td><strong>Does NOT Have Access To</strong></td>
+<td>Raw schema metadata, SQL execution, warehouse credentials</td>
+</tr>
+<tr>
+<td><strong>Why Separate</strong></td>
+<td>Intent understanding is a distinct NLP task. Mixing it with schema selection would overload the LLM context and conflate two different reasoning objectives. Intent errors propagate downstream—isolating this step makes them catchable early.</td>
+</tr>
+</tbody></table>
+<p><strong>Ambiguity Resolution Protocol:</strong></p>
+<ul>
+<li>If &quot;sales&quot; could mean <code>gross_sales</code>, <code>net_sales</code>, or <code>units_sold</code> → interrupt and ask user</li>
+<li>If time range is unspecified for a temporal query → use department default or ask</li>
+<li>If query references a term not in the business glossary → flag for clarification</li>
+</ul>
+<h4>Agent 2: Schema Agent</h4>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Purpose</strong></td>
+<td>Identify the minimal set of tables and columns needed to answer the query</td>
+</tr>
+<tr>
+<td><strong>Inputs</strong></td>
+<td>Structured intent from Intent Agent, user&#39;s RBAC permissions</td>
+</tr>
+<tr>
+<td><strong>Outputs</strong></td>
+<td><code>{ selected_tables[], selected_columns[], join_paths[], filtered_tables_by_rbac }</code></td>
+</tr>
+<tr>
+<td><strong>Internal Reasoning</strong></td>
+<td>Perform semantic search over table/column embeddings. Use business glossary to map intent entities to exact columns. Traverse foreign key graph to find join paths. Filter out tables the user lacks permission to access. Rank candidate schemas by relevance.</td>
+</tr>
+<tr>
+<td><strong>Tools</strong></td>
+<td>Vector Search (table/column embeddings), Metadata Store Query, FK Graph Traversal, RBAC Permission Check</td>
+</tr>
+<tr>
+<td><strong>Has Access To</strong></td>
+<td>Full metadata store, vector index, FK relationships, RBAC policies, business glossary</td>
+</tr>
+<tr>
+<td><strong>Does NOT Have Access To</strong></td>
+<td>Actual data in the warehouse, SQL execution, conversation history (unnecessary at this stage)</td>
+</tr>
+<tr>
+<td><strong>Why Separate</strong></td>
+<td>Schema selection over 1000+ tables is the hardest retrieval problem in the system. It requires specialized tools (vector search, graph traversal) and careful RBAC filtering. Combining this with SQL generation would create a prompt too large and with too many competing objectives.</td>
+</tr>
+</tbody></table>
+<p><strong>Multi-Database Routing:</strong></p>
+<ul>
+<li>If the intent spans multiple domains (e.g., &quot;compare marketing spend to sales revenue&quot;), the Schema Agent identifies tables from multiple warehouses and flags a cross-database query.</li>
+</ul>
+<h4>Agent 3: SQL Generator Agent</h4>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Purpose</strong></td>
+<td>Generate syntactically and semantically correct SQL from the intent and selected schema</td>
+</tr>
+<tr>
+<td><strong>Inputs</strong></td>
+<td>Structured intent, selected tables/columns, join paths, database dialect, few-shot examples</td>
+</tr>
+<tr>
+<td><strong>Outputs</strong></td>
+<td><code>{ sql_query, explanation, confidence_score, assumptions_made[] }</code></td>
+</tr>
+<tr>
+<td><strong>Internal Reasoning</strong></td>
+<td>Construct SQL using the selected schema. Apply dialect-specific syntax (Snowflake vs BigQuery vs Redshift). Use few-shot examples from query history for similar patterns. Document any assumptions (e.g., &quot;assumed &#39;revenue&#39; means <code>net_revenue_usd</code>&quot;).</td>
+</tr>
+<tr>
+<td><strong>Tools</strong></td>
+<td>Few-Shot Example Retriever (from query history), SQL Dialect Reference, Business Rule Lookup</td>
+</tr>
+<tr>
+<td><strong>Has Access To</strong></td>
+<td>Selected schema subset (not full 1000+ table catalog), intent object, few-shot examples, dialect rules</td>
+</tr>
+<tr>
+<td><strong>Does NOT Have Access To</strong></td>
+<td>Full metadata store (only sees pre-filtered schema), warehouse credentials, user PII</td>
+</tr>
+<tr>
+<td><strong>Why Separate</strong></td>
+<td>SQL generation is the core LLM reasoning task and benefits from a focused, well-structured prompt with minimal noise. Receiving only the relevant schema subset (typically 3-15 tables) keeps the prompt under 4K tokens of schema context, maximizing generation quality.</td>
+</tr>
+</tbody></table>
+<h4>Agent 4: Validator Agent</h4>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Purpose</strong></td>
+<td>Validate the generated SQL for correctness, safety, and policy compliance</td>
+</tr>
+<tr>
+<td><strong>Inputs</strong></td>
+<td>Generated SQL, selected schema, user permissions, guardrail policies</td>
+</tr>
+<tr>
+<td><strong>Outputs</strong></td>
+<td><code>{ is_valid, validation_errors[], is_safe, safety_flags[], needs_approval, optimized_sql }</code></td>
+</tr>
+<tr>
+<td><strong>Internal Reasoning</strong></td>
+<td>Parse SQL AST to verify all referenced tables/columns exist. Check for SQL injection patterns. Verify no DML/DDL statements. Check column-level permissions. Estimate query cost. Detect unsafe patterns (SELECT *, CROSS JOIN without filter, unbounded scans). Suggest LIMIT clause if missing.</td>
+</tr>
+<tr>
+<td><strong>Tools</strong></td>
+<td>SQL Parser (sqlglot), Schema Validator, Cost Estimator (EXPLAIN plan), Guardrail Rule Engine, RBAC Checker</td>
+</tr>
+<tr>
+<td><strong>Has Access To</strong></td>
+<td>SQL AST, schema metadata, RBAC policies, guardrail rules, cost estimation APIs</td>
+</tr>
+<tr>
+<td><strong>Does NOT Have Access To</strong></td>
+<td>Actual query execution, result data, business glossary (not needed at validation stage)</td>
+</tr>
+<tr>
+<td><strong>Why Separate</strong></td>
+<td>Validation is a fundamentally different task from generation—it&#39;s more rule-based and deterministic. Separating it creates a clear security boundary: the Generator can be creative, but nothing executes without passing the Validator. This is the primary defense against hallucinated or dangerous SQL.</td>
+</tr>
+</tbody></table>
+<p><strong>Validation Checks:</strong></p>
+<ol>
+<li><strong>Syntactic</strong>: Parse SQL with sqlglot; reject if unparseable</li>
+<li><strong>Schema</strong>: Every table and column in the SQL must exist in the selected schema</li>
+<li><strong>Permission</strong>: User must have access to all referenced tables and columns</li>
+<li><strong>Safety</strong>: No DDL/DML, no <code>DROP</code>, <code>DELETE</code>, <code>UPDATE</code>, <code>INSERT</code>, <code>TRUNCATE</code></li>
+<li><strong>Cost</strong>: Estimated scan size &lt; threshold (e.g., 10TB). If exceeded → require approval</li>
+<li><strong>Guardrails</strong>: No sensitive columns without masking; PII columns flagged</li>
+<li><strong>Optimization</strong>: Add <code>LIMIT</code> if missing, suggest partition filters</li>
+</ol>
+<p><strong>Self-Correction Loop:</strong>
+If validation fails → return errors to SQL Generator Agent with specific feedback → Generator produces corrected SQL → re-validate. Maximum 3 iterations before escalating to human.</p>
+<h4>Agent 5: Executor Agent</h4>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Purpose</strong></td>
+<td>Execute validated SQL against the data warehouse safely</td>
+</tr>
+<tr>
+<td><strong>Inputs</strong></td>
+<td>Validated SQL, target warehouse, execution parameters (timeout, row limit)</td>
+</tr>
+<tr>
+<td><strong>Outputs</strong></td>
+<td><code>{ result_rows[], row_count, execution_time_ms, truncated, error }</code></td>
+</tr>
+<tr>
+<td><strong>Internal Reasoning</strong></td>
+<td>Select correct warehouse connection. Set query timeout. Execute via read-only proxy. Monitor execution time. Truncate results if they exceed row limits. Handle database errors gracefully.</td>
+</tr>
+<tr>
+<td><strong>Tools</strong></td>
+<td>Query Proxy (read-only connection), Query Governor (timeout/cost enforcement)</td>
+</tr>
+<tr>
+<td><strong>Has Access To</strong></td>
+<td>Read-only warehouse connections (via proxy), execution parameters</td>
+</tr>
+<tr>
+<td><strong>Does NOT Have Access To</strong></td>
+<td>Write access to any database, LLM services (no reasoning needed), user profile</td>
+</tr>
+<tr>
+<td><strong>Why Separate</strong></td>
+<td>Execution is an I/O operation with security implications. Isolating it behind a read-only proxy with strict timeouts and row limits prevents the agentic system from accidentally modifying data. This agent has the most restricted tool access of any agent.</td>
+</tr>
+</tbody></table>
+<h4>Agent 6: Formatter Agent</h4>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Purpose</strong></td>
+<td>Transform raw query results into a human-friendly response</td>
+</tr>
+<tr>
+<td><strong>Inputs</strong></td>
+<td>Raw result rows, original NL question, SQL used, user preferences</td>
+</tr>
+<tr>
+<td><strong>Outputs</strong></td>
+<td><code>{ natural_language_answer, formatted_table, chart_suggestion, sql_shown, caveats[] }</code></td>
+</tr>
+<tr>
+<td><strong>Internal Reasoning</strong></td>
+<td>Generate a natural language summary answering the user&#39;s question. Format numbers (currency, percentages). Suggest visualization type (bar chart for comparisons, line chart for trends). Note any caveats (&quot;results limited to 1000 rows&quot;, &quot;data as of yesterday&quot;). Apply data masking to PII columns.</td>
+</tr>
+<tr>
+<td><strong>Tools</strong></td>
+<td>PII Detector, Data Masking Service, Visualization Recommender</td>
+</tr>
+<tr>
+<td><strong>Has Access To</strong></td>
+<td>Query results, original question, SQL explanation, masking rules</td>
+</tr>
+<tr>
+<td><strong>Does NOT Have Access To</strong></td>
+<td>Warehouse connections, full schema metadata, RBAC policies (masking already applied)</td>
+</tr>
+<tr>
+<td><strong>Why Separate</strong></td>
+<td>Formatting is a user-facing concern and the last place to apply data masking. Separating it ensures that even if earlier agents miss a PII column, the Formatter&#39;s PII scan catches it before the user sees the data.</td>
+</tr>
+</tbody></table>
+<h3>Shared State Across the Graph</h3>
+<pre><code class="language-python">class Text2SQLState(TypedDict):
+    # Input
+    user_query: str
+    user_id: str
+    session_id: str
+    conversation_history: list[dict]
+
+    # Intent Agent Output
+    intent: IntentResult
+    needs_clarification: bool
+    clarification_question: str
+
+    # Schema Agent Output
+    selected_tables: list[TableSchema]
+    selected_columns: list[ColumnSchema]
+    join_paths: list[JoinPath]
+    rbac_filtered: list[str]  # tables removed due to permissions
+
+    # SQL Generator Output
+    generated_sql: str
+    sql_explanation: str
+    sql_confidence: float
+    assumptions: list[str]
+
+    # Validator Output
+    is_valid: bool
+    validation_errors: list[str]
+    is_safe: bool
+    safety_flags: list[str]
+    needs_approval: bool
+    optimized_sql: str
+
+    # Executor Output
+    query_results: list[dict]
+    row_count: int
+    execution_time_ms: int
+    execution_error: str
+
+    # Formatter Output
+    final_response: str
+    formatted_table: str
+    chart_suggestion: str
+    caveats: list[str]
+
+    # Control Flow
+    retry_count: int
+    max_retries: int
+    current_agent: str
+    error_history: list[str]
+    trace_id: str
+</code></pre>
+<hr>
+<h2>3. LangGraph Architecture</h2>
+<h3>Why LangGraph?</h3>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>LangGraph Capability</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Multi-agent orchestration with conditional routing</td>
+<td>First-class support for conditional edges and branching</td>
+</tr>
+<tr>
+<td>Stateful execution with persistence</td>
+<td>Built-in checkpointing to PostgreSQL, SQLite, or custom backends</td>
+</tr>
+<tr>
+<td>Human-in-the-loop interrupts</td>
+<td>Native <code>interrupt_before</code> / <code>interrupt_after</code> on any node</td>
+</tr>
+<tr>
+<td>Retry and error recovery</td>
+<td>Resume from any checkpoint; re-execute failed nodes</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>Integrated with LangSmith for full execution traces</td>
+</tr>
+<tr>
+<td>Streaming</td>
+<td>Supports streaming intermediate results to the UI</td>
+</tr>
+<tr>
+<td>Parallel execution</td>
+<td>Supports parallel branches via <code>Send</code> API</td>
+</tr>
+<tr>
+<td>Production deployment</td>
+<td>LangGraph Platform for managed deployment; or self-hosted with LangGraph SDK</td>
+</tr>
+</tbody></table>
+<p><strong>Alternatives considered:</strong> CrewAI (too opinionated, less control over routing), AutoGen (complex multi-agent messaging model), raw LangChain (lacks graph-based orchestration and checkpointing). LangGraph provides the right balance of control, observability, and production-readiness.</p>
+<h3>Graph Definition</h3>
+<pre><code class="language-mermaid">stateDiagram-v2
+    [*] --&gt; authenticate
+    authenticate --&gt; intent_agent
+
+    intent_agent --&gt; clarification_check
+
+    clarification_check --&gt; human_clarification: needs_clarification=true
+    human_clarification --&gt; intent_agent
+
+    clarification_check --&gt; schema_agent: needs_clarification=false
+
+    schema_agent --&gt; schema_check
+    schema_check --&gt; no_tables_found: no relevant tables
+    schema_check --&gt; sql_generator: tables found
+
+    no_tables_found --&gt; formatter_agent: return &quot;cannot answer&quot; response
+
+    sql_generator --&gt; validator_agent
+
+    validator_agent --&gt; validation_check
+
+    validation_check --&gt; sql_generator: invalid AND retries &lt; 3
+    validation_check --&gt; approval_check: valid
+
+    approval_check --&gt; human_approval: needs_approval=true
+    human_approval --&gt; executor_agent: approved
+    human_approval --&gt; formatter_agent: denied
+
+    approval_check --&gt; executor_agent: needs_approval=false
+
+    executor_agent --&gt; execution_check
+
+    execution_check --&gt; error_handler: execution_error
+    execution_check --&gt; formatter_agent: success
+
+    error_handler --&gt; sql_generator: recoverable error AND retries &lt; 3
+    error_handler --&gt; formatter_agent: unrecoverable OR max retries
+
+    formatter_agent --&gt; feedback_collector
+    feedback_collector --&gt; [*]
+</code></pre>
+<h3>LangGraph Implementation</h3>
+<pre><code class="language-python">from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.errors import NodeInterrupt
+
+# ─── Graph Construction ───
+
+builder = StateGraph(Text2SQLState)
+
+# ─── Nodes ───
+builder.add_node(&quot;authenticate&quot;, authenticate_user)
+builder.add_node(&quot;intent_agent&quot;, run_intent_agent)
+builder.add_node(&quot;schema_agent&quot;, run_schema_agent)
+builder.add_node(&quot;sql_generator&quot;, run_sql_generator)
+builder.add_node(&quot;validator_agent&quot;, run_validator_agent)
+builder.add_node(&quot;executor_agent&quot;, run_executor_agent)
+builder.add_node(&quot;formatter_agent&quot;, run_formatter_agent)
+builder.add_node(&quot;error_handler&quot;, handle_error)
+builder.add_node(&quot;feedback_collector&quot;, collect_feedback)
+
+# ─── Entry Point ───
+builder.set_entry_point(&quot;authenticate&quot;)
+
+# ─── Edges ───
+builder.add_edge(&quot;authenticate&quot;, &quot;intent_agent&quot;)
+
+# Conditional: does the user&#39;s query need clarification?
+builder.add_conditional_edges(
+    &quot;intent_agent&quot;,
+    route_after_intent,
+    {
+        &quot;clarify&quot;: &quot;intent_agent&quot;,      # interrupt + re-enter
+        &quot;proceed&quot;: &quot;schema_agent&quot;,
+    }
+)
+
+# Conditional: did schema agent find relevant tables?
+builder.add_conditional_edges(
+    &quot;schema_agent&quot;,
+    route_after_schema,
+    {
+        &quot;no_tables&quot;: &quot;formatter_agent&quot;,  # graceful &quot;can&#39;t answer&quot;
+        &quot;tables_found&quot;: &quot;sql_generator&quot;,
+    }
+)
+
+builder.add_edge(&quot;sql_generator&quot;, &quot;validator_agent&quot;)
+
+# Conditional: is the SQL valid?
+builder.add_conditional_edges(
+    &quot;validator_agent&quot;,
+    route_after_validation,
+    {
+        &quot;invalid_retry&quot;: &quot;sql_generator&quot;,
+        &quot;valid_needs_approval&quot;: &quot;executor_agent&quot;,  # interrupt_before
+        &quot;valid&quot;: &quot;executor_agent&quot;,
+    }
+)
+
+# Conditional: did execution succeed?
+builder.add_conditional_edges(
+    &quot;executor_agent&quot;,
+    route_after_execution,
+    {
+        &quot;success&quot;: &quot;formatter_agent&quot;,
+        &quot;error&quot;: &quot;error_handler&quot;,
+    }
+)
+
+# Conditional: is the error recoverable?
+builder.add_conditional_edges(
+    &quot;error_handler&quot;,
+    route_after_error,
+    {
+        &quot;retry&quot;: &quot;sql_generator&quot;,
+        &quot;give_up&quot;: &quot;formatter_agent&quot;,
+    }
+)
+
+builder.add_edge(&quot;formatter_agent&quot;, &quot;feedback_collector&quot;)
+builder.add_edge(&quot;feedback_collector&quot;, END)
+
+# ─── Interrupts for Human-in-the-Loop ───
+# Clarification: interrupt inside intent_agent via NodeInterrupt
+# Approval: interrupt_before executor_agent when needs_approval=True
+
+# ─── Checkpointing ───
+checkpointer = PostgresSaver.from_conn_string(POSTGRES_CONN_STRING)
+
+# ─── Compile ───
+graph = builder.compile(
+    checkpointer=checkpointer,
+    interrupt_before=[&quot;executor_agent&quot;],  # conditional interrupt for approval
+)
+</code></pre>
+<h3>Node Implementation Patterns</h3>
+<pre><code class="language-python"># ─── Intent Agent Node ───
+def run_intent_agent(state: Text2SQLState) -&gt; dict:
+    if state.get(&quot;needs_clarification&quot;):
+        # This is a re-entry after human clarification
+        # The user&#39;s clarifying answer is in the updated user_query
+        pass
+
+    # Retrieve similar past queries for context
+    similar_queries = query_history_store.search(state[&quot;user_query&quot;], top_k=5)
+
+    # Look up business terms
+    glossary_matches = business_glossary.lookup(state[&quot;user_query&quot;])
+
+    # Call LLM to parse intent
+    intent_result = llm.invoke(
+        intent_prompt.format(
+            query=state[&quot;user_query&quot;],
+            conversation_history=state[&quot;conversation_history&quot;],
+            glossary=glossary_matches,
+            similar_queries=similar_queries,
+        )
+    )
+
+    if intent_result.ambiguities:
+        # Raise interrupt for human clarification
+        raise NodeInterrupt(
+            f&quot;I need clarification: {intent_result.clarification_question}&quot;
+        )
+
+    return {
+        &quot;intent&quot;: intent_result,
+        &quot;needs_clarification&quot;: False,
+    }
+
+
+# ─── Routing Functions ───
+def route_after_validation(state: Text2SQLState) -&gt; str:
+    if not state[&quot;is_valid&quot;] and state[&quot;retry_count&quot;] &lt; state[&quot;max_retries&quot;]:
+        return &quot;invalid_retry&quot;
+    if state[&quot;needs_approval&quot;]:
+        return &quot;valid_needs_approval&quot;
+    return &quot;valid&quot;
+
+
+def route_after_error(state: Text2SQLState) -&gt; str:
+    error = state[&quot;execution_error&quot;]
+    if is_recoverable(error) and state[&quot;retry_count&quot;] &lt; state[&quot;max_retries&quot;]:
+        return &quot;retry&quot;
+    return &quot;give_up&quot;
+</code></pre>
+<h3>Checkpointing &amp; Memory</h3>
+<ul>
+<li><strong>Checkpoint store</strong>: PostgreSQL via <code>PostgresSaver</code> — every node execution persists the full state</li>
+<li><strong>Resumability</strong>: If the process crashes mid-execution, it resumes from the last completed node</li>
+<li><strong>Human-in-the-loop</strong>: When a <code>NodeInterrupt</code> fires, the state is saved. When the user responds, <code>graph.invoke(user_response, config={&quot;configurable&quot;: {&quot;thread_id&quot;: thread_id}})</code> resumes from the interrupt</li>
+<li><strong>Conversation memory</strong>: Managed externally in the Conversation Manager; passed into the graph as <code>conversation_history</code> in the initial state. This keeps the LangGraph state focused on the current query while the Conversation Manager handles multi-turn context.</li>
+</ul>
+<h3>Retry Mechanisms</h3>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Retry Strategy</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SQL validation failure</td>
+<td>Re-route to SQL Generator with error feedback, max 3 retries</td>
+</tr>
+<tr>
+<td>Database timeout</td>
+<td>Retry once with increased timeout; then suggest query simplification</td>
+</tr>
+<tr>
+<td>LLM API error (429, 500)</td>
+<td>Exponential backoff with jitter, fall back to secondary LLM</td>
+</tr>
+<tr>
+<td>Schema agent finds no tables</td>
+<td>No retry; return &quot;unable to answer&quot; with suggestions</td>
+</tr>
+<tr>
+<td>Execution returns empty results</td>
+<td>Return empty result with natural language explanation; no retry</td>
+</tr>
+</tbody></table>
+<h3>Parallel Branches</h3>
+<p>Parallel execution is used in two places:</p>
+<ol>
+<li><strong>Schema Agent internals</strong>: Vector search, keyword search, and graph traversal run in parallel, then results are merged and reranked.</li>
+<li><strong>Post-execution</strong>: PII detection and visualization recommendation run in parallel within the Formatter Agent.</li>
+</ol>
+<p>These are implemented as parallel tool calls within the respective agent nodes, not as separate LangGraph branches, to keep the graph topology simple.</p>
+<hr>
+<h2>4. End-to-End Request Lifecycle</h2>
+<h3>Example: &quot;Top 10 customers by revenue in Europe&quot;</h3>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant U as User
+    participant GW as Gateway
+    participant Orch as Orchestrator
+    participant Intent as Intent Agent
+    participant Schema as Schema Agent
+    participant SQLGen as SQL Generator
+    participant Val as Validator
+    participant DW as Warehouse
+    participant Fmt as Formatter
+
+    U-&gt;&gt;GW: &quot;Top 10 customers by revenue in Europe&quot;
+    GW-&gt;&gt;Orch: Authenticated request
+    Note over Orch: Cache miss
+    Orch-&gt;&gt;Intent: Parse query
+    Note over Intent: intent=ranking, metric=revenue, filter=Europe
+    Intent--&gt;&gt;Schema: IntentResult
+    Schema--&gt;&gt;Schema: Vector search + RBAC filter + rerank
+    Note over Schema: dim_customers + fact_orders selected
+    Schema--&gt;&gt;SQLGen: 3 tables, 8 columns, join paths
+    Note over SQLGen: Few-shot retrieval + SQL generation
+    SQLGen--&gt;&gt;Val: SQL + confidence=0.92
+    Note over Val: AST parse, schema check, safety check — all pass
+    Val--&gt;&gt;DW: Execute via read-only proxy
+    DW--&gt;&gt;Fmt: 10 rows, 245ms
+    Note over Fmt: PII scan + format + NL summary
+    Fmt--&gt;&gt;U: Answer + table + SQL + chart suggestion
+</code></pre>
+<h3>Stage-by-Stage Detail</h3>
+<h4>Stage 1: Authentication (5-15ms)</h4>
+<p>The API Gateway validates the JWT token against the identity provider (Okta, Auth0, or corporate OIDC). The token contains:</p>
+<ul>
+<li><code>user_id</code>, <code>email</code>, <code>roles[]</code>, <code>org_id</code>, <code>department</code></li>
+<li><code>data_access_groups[]</code> — which data domains the user can access</li>
+</ul>
+<p>The Auth Service resolves this into a <code>UserContext</code> object that travels with the request through the entire pipeline. No agent ever queries the auth service directly — they receive pre-resolved permissions.</p>
+<h4>Stage 2: Intent Understanding (200-500ms)</h4>
+<p>The Intent Agent receives the NL query and conversation history. It calls the LLM with a structured prompt:</p>
+<pre><code>You are a query intent parser for an enterprise data warehouse.
+
+Given the user&#39;s question, extract:
+- intent_type: one of [ranking, aggregation, comparison, trend, lookup, filter]
+- entities: business objects mentioned (customers, orders, products, etc.)
+- metrics: measures to compute (revenue, count, average, etc.)
+- filters: conditions (region=Europe, date ranges, etc.)
+- sort_order: asc/desc
+- limit: number of results
+- time_range: explicit or implicit temporal bounds
+- ambiguities: anything unclear that needs clarification
+
+User question: &quot;Top 10 customers by revenue in Europe&quot;
+Business glossary matches: revenue → net_revenue_usd (fact_orders.revenue_usd)
+</code></pre>
+<p>Output:</p>
+<pre><code class="language-json">{
+  &quot;intent_type&quot;: &quot;ranking&quot;,
+  &quot;entities&quot;: [&quot;customers&quot;],
+  &quot;metrics&quot;: [&quot;revenue&quot;],
+  &quot;filters&quot;: [{&quot;field&quot;: &quot;region&quot;, &quot;operator&quot;: &quot;=&quot;, &quot;value&quot;: &quot;Europe&quot;}],
+  &quot;sort_order&quot;: &quot;desc&quot;,
+  &quot;limit&quot;: 10,
+  &quot;time_range&quot;: null,
+  &quot;ambiguities&quot;: []
+}
+</code></pre>
+<h4>Stage 3: Schema Discovery &amp; Table Selection (300-800ms)</h4>
+<p>The Schema Agent performs multi-strategy retrieval:</p>
+<ol>
+<li><strong>Semantic search</strong> (parallel): Embed the query &quot;customers revenue Europe&quot; → search vector store → top 20 candidate tables</li>
+<li><strong>Keyword search</strong> (parallel): Search metadata for exact matches on &quot;customer&quot;, &quot;revenue&quot;, &quot;europe&quot;</li>
+<li><strong>Business glossary</strong> (parallel): &quot;revenue&quot; → maps to <code>fact_orders.revenue_usd</code></li>
+</ol>
+<p>Results are merged, deduplicated, and reranked. Then:</p>
+<ol start="4">
+<li><strong>FK graph traversal</strong>: For the top candidate tables, find shortest join paths</li>
+<li><strong>RBAC filter</strong>: Remove tables the user&#39;s role cannot access</li>
+<li><strong>Column selection</strong>: From selected tables, pick only columns relevant to the query</li>
+</ol>
+<p>The agent outputs a compact schema context (typically 500-2000 tokens) containing only what the SQL Generator needs.</p>
+<h4>Stage 4: Context Retrieval &amp; Few-Shot Examples (100-200ms)</h4>
+<p>The system retrieves 3-5 similar past NL→SQL pairs from the Query History Store:</p>
+<ul>
+<li>Semantic similarity to the current query</li>
+<li>Same domain/tables</li>
+<li>High feedback scores (thumbs-up from users)</li>
+</ul>
+<p>These serve as few-shot examples in the SQL generation prompt.</p>
+<h4>Stage 5: SQL Generation (500-1500ms)</h4>
+<p>The SQL Generator receives a focused prompt:</p>
+<pre><code>Generate a SQL query for Snowflake.
+
+User question: &quot;Top 10 customers by revenue in Europe&quot;
+
+Available schema:
+  dim_customers: customer_id (INT PK), name (VARCHAR), region (VARCHAR), ...
+  fact_orders: order_id (INT PK), customer_id (INT FK→dim_customers), revenue_usd (DECIMAL), order_date (DATE), ...
+
+Join paths:
+  fact_orders.customer_id = dim_customers.customer_id
+
+Similar examples:
+  Q: &quot;Top 5 products by sales&quot; → SELECT p.name, SUM(o.amount) ...
+  Q: &quot;Biggest customers in APAC&quot; → SELECT c.name, SUM(o.revenue_usd) ...
+
+Rules:
+- Always use explicit JOIN syntax
+- Always include a LIMIT clause
+- Use aliases for readability
+- Filter using WHERE, not HAVING, when possible
+</code></pre>
+<h4>Stage 6: SQL Validation (50-200ms)</h4>
+<p>Primarily deterministic, with an optional LLM check:</p>
+<ol>
+<li><strong>AST parsing</strong> via sqlglot — fast, deterministic</li>
+<li><strong>Schema validation</strong> — verify every identifier exists</li>
+<li><strong>Permission check</strong> — verify column-level access</li>
+<li><strong>Safety rules</strong> — regex + AST analysis for dangerous patterns</li>
+<li><strong>Cost estimation</strong> — <code>EXPLAIN</code> plan if supported by the warehouse</li>
+<li><strong>Semantic check</strong> (optional LLM call) — &quot;Does this SQL actually answer the question?&quot;</li>
+</ol>
+<h4>Stage 7: SQL Execution (100ms-30s)</h4>
+<ul>
+<li>Execute through read-only proxy with <code>statement_timeout = 30s</code></li>
+<li>Row limit enforced: max 10,000 rows returned to the application</li>
+<li>If the warehouse supports it, use <code>EXPLAIN</code> first to check estimated cost</li>
+</ul>
+<h4>Stage 8: Result Formatting (200-500ms)</h4>
+<ul>
+<li>PII scan on result data</li>
+<li>Number formatting (currency symbols, thousands separators)</li>
+<li>Natural language summary: &quot;The top customer in Europe by revenue is Acme Corp with $12.4M, followed by...&quot;</li>
+<li>Visualization suggestion: bar chart for rankings, line chart for time series</li>
+<li>Caveats: &quot;Note: revenue is in USD. Results include all-time data since no date filter was specified.&quot;</li>
+</ul>
+<h4>Stage 9: Logging &amp; Feedback (async, &lt;50ms from user&#39;s perspective)</h4>
+<p>Asynchronously (via message queue):</p>
+<ul>
+<li>Audit log: full trace of query → intent → schema → SQL → results</li>
+<li>Metrics: latency per agent, token usage, cache hit/miss</li>
+<li>The user can provide feedback (thumbs up/down, SQL correction), which updates the Query History Store</li>
+</ul>
+<h3>Lifecycle for Other Example Queries</h3>
+<p><strong>&quot;How many sales happened in the last 3 years?&quot;</strong></p>
+<ul>
+<li>Intent Agent resolves &quot;last 3 years&quot; to <code>2023-06-25 to 2026-06-25</code></li>
+<li>Schema Agent finds <code>fact_sales</code> with <code>sale_date</code> column</li>
+<li>SQL: <code>SELECT COUNT(*) FROM fact_sales WHERE sale_date &gt;= &#39;2023-06-25&#39;</code></li>
+<li>Formatter: &quot;There were 2,847,392 sales in the last 3 years.&quot;</li>
+</ul>
+<p><strong>&quot;Average order value by quarter&quot;</strong></p>
+<ul>
+<li>Intent Agent: aggregation, metric=average order value, grouping=quarter</li>
+<li>Schema Agent: <code>fact_orders</code> with <code>order_total</code>, <code>order_date</code></li>
+<li>SQL: <code>SELECT DATE_TRUNC(&#39;quarter&#39;, order_date) AS quarter, AVG(order_total) AS avg_order_value FROM fact_orders GROUP BY 1 ORDER BY 1</code></li>
+<li>Formatter: table + line chart suggestion showing trend</li>
+</ul>
+<p><strong>&quot;Compare sales between Q1 and Q2&quot;</strong></p>
+<ul>
+<li>Intent Agent: comparison, implicit current year (2026), Q1 vs Q2</li>
+<li>Ambiguity check: &quot;Q1 and Q2 of which year? Assuming 2026.&quot; (stated as caveat, not an interrupt, since current year is a reasonable default)</li>
+<li>SQL: <code>SELECT CASE WHEN ... END AS quarter, SUM(amount) FROM ... WHERE ... GROUP BY 1</code></li>
+<li>Formatter: side-by-side comparison table + grouped bar chart</li>
+</ul>
+<hr>
+<h2>5. Metadata Strategy</h2>
+<h3>Schema Metadata Store (PostgreSQL)</h3>
+<p>The metadata store is the foundation of the system. It stores structured information about every table and column in the warehouse.</p>
+<p><strong>Entity Relationships:</strong></p>
+<pre><code>DATA_SOURCE 1──* SCHEMA_NAMESPACE 1──* TABLE_META 1──* COLUMN_META
+                                      TABLE_META 1──* TABLE_RELATIONSHIP
+                                      TABLE_META 1──* TABLE_STATS
+                                      COLUMN_META 1──* COLUMN_STATS
+BUSINESS_TERM 1──* TERM_MAPPING *──1 COLUMN_META
+QUERY_HISTORY 1──* QUERY_FEEDBACK
+</code></pre>
+<p><strong>Key Tables:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Key Columns</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>DATA_SOURCE</code></td>
+<td>id, name, type (snowflake|bigquery|redshift), connection_config_ref, last_synced</td>
+</tr>
+<tr>
+<td><code>SCHEMA_NAMESPACE</code></td>
+<td>id, data_source_id (FK), database_name, schema_name, domain</td>
+</tr>
+<tr>
+<td><code>TABLE_META</code></td>
+<td>id, schema_namespace_id (FK), table_name, description, business_description, owner_team, update_frequency, row_count_approx, is_active, description_embedding (vector)</td>
+</tr>
+<tr>
+<td><code>COLUMN_META</code></td>
+<td>id, table_id (FK), column_name, data_type, description, business_description, is_primary_key, is_pii, is_sensitive, masking_policy, sample_values, description_embedding (vector)</td>
+</tr>
+<tr>
+<td><code>TABLE_RELATIONSHIP</code></td>
+<td>id, from_table_id (FK), to_table_id (FK), from_column, to_column, relationship_type (fk|inferred|manual), confidence</td>
+</tr>
+<tr>
+<td><code>TABLE_STATS</code></td>
+<td>id, table_id (FK), row_count, size_bytes, stats_collected_at, partition_info (jsonb)</td>
+</tr>
+<tr>
+<td><code>COLUMN_STATS</code></td>
+<td>id, column_id (FK), distinct_count, null_percentage, min_value, max_value, value_distribution (jsonb)</td>
+</tr>
+<tr>
+<td><code>BUSINESS_TERM</code></td>
+<td>id, term, definition, domain, synonyms, term_embedding (vector)</td>
+</tr>
+<tr>
+<td><code>TERM_MAPPING</code></td>
+<td>id, term_id (FK), column_id (FK), mapping_type (exact|derived|computed), sql_expression</td>
+</tr>
+<tr>
+<td><code>QUERY_HISTORY</code></td>
+<td>id, natural_language_query, generated_sql, was_successful, feedback_score, user_department, query_embedding (vector)</td>
+</tr>
+<tr>
+<td><code>QUERY_FEEDBACK</code></td>
+<td>id, query_id (FK), feedback_type (thumbs_up|thumbs_down|correction), corrected_sql, comment</td>
+</tr>
+</tbody></table>
+<h3>Business Glossary</h3>
+<p>The business glossary is the most critical metadata component. It bridges the gap between business language and database schema.</p>
+<pre><code>Term: &quot;Revenue&quot;
+Definition: &quot;Net revenue after refunds and discounts, in USD&quot;
+SQL Expression: &quot;fact_orders.revenue_usd&quot;
+Synonyms: [&quot;sales&quot;, &quot;income&quot;, &quot;earnings&quot;, &quot;top line&quot;]
+Domain: Finance
+Owner: finance-data-team@corp.com
+
+Term: &quot;Active Customer&quot;
+Definition: &quot;Customer with at least one order in the last 90 days&quot;
+SQL Expression: &quot;EXISTS (SELECT 1 FROM fact_orders WHERE customer_id = dim_customers.customer_id AND order_date &gt;= CURRENT_DATE - INTERVAL &#39;90 days&#39;)&quot;
+Domain: Sales
+</code></pre>
+<p>Without this glossary, the LLM would guess which column &quot;revenue&quot; maps to — a common source of hallucination.</p>
+<h3>Embedding &amp; Vector Indexing Strategy</h3>
+<p><strong>What gets embedded:</strong></p>
+<ul>
+<li>Table descriptions (business_description field)</li>
+<li>Column descriptions (business_description field)</li>
+<li>Business terms and their definitions</li>
+<li>Past NL queries (from query history)</li>
+</ul>
+<p><strong>Embedding model:</strong> OpenAI <code>text-embedding-3-large</code> (3072 dimensions) or Cohere <code>embed-english-v3.0</code></p>
+<p><strong>Vector store:</strong> pgvector extension in the same PostgreSQL instance as the metadata store (simplifies operations). For larger deployments, a dedicated Pinecone or Weaviate instance.</p>
+<p><strong>Indexing strategy:</strong></p>
+<ul>
+<li>One index for table-level embeddings (~1000-5000 entries) — HNSW index with cosine similarity</li>
+<li>One index for column-level embeddings (~10,000-50,000 entries) — HNSW index</li>
+<li>One index for business terms (~500-2000 entries) — HNSW index</li>
+<li>One index for past queries (~100,000+ entries) — IVFFlat index for scale</li>
+</ul>
+<p>At 1000 tables with an average of 15 columns, the column index has ~15,000 entries. HNSW handles this with sub-millisecond latency.</p>
+<h3>Metadata Synchronization</h3>
+<pre><code>Schema Sync Pipeline:
+
+  Cron (every 6h) / Warehouse Webhook (on DDL change)
+      └──&gt; Schema Crawler
+              └──&gt; Schema Differ
+                      ├── New/Changed Tables ──&gt; Metadata Updater ──&gt; Re-embed ──&gt; Update Vector Index
+                      │                                           └──&gt; Notify Data Stewards
+                      └── Dropped Tables ──&gt; Table Deactivator
+</code></pre>
+<p><strong>Sync process:</strong></p>
+<ol>
+<li><strong>Scheduled crawl</strong> (every 6 hours): Query <code>INFORMATION_SCHEMA</code> from each warehouse to get current tables, columns, data types</li>
+<li><strong>Event-driven</strong> (preferred): If the warehouse supports DDL event notifications (Snowflake supports this), trigger sync on schema changes</li>
+<li><strong>Diff detection</strong>: Compare crawled schema against metadata store; identify new, changed, and dropped objects</li>
+<li><strong>New tables</strong>: Added with <code>is_active=false</code> and empty descriptions. Data stewards are notified to add business descriptions.</li>
+<li><strong>Changed columns</strong>: Updated automatically; embeddings re-generated</li>
+<li><strong>Dropped tables</strong>: Marked <code>is_active=false</code>, not deleted (preserves historical query context)</li>
+<li><strong>Statistics refresh</strong>: Row counts, distinct counts, and value distributions are refreshed on a separate daily schedule (these queries can be expensive)</li>
+</ol>
+<h3>How Relevant Tables Are Retrieved Without Overwhelming the LLM</h3>
+<p>This is solved through a <strong>funnel approach</strong>:</p>
+<pre><code>1000+ tables
+    ↓ Vector search + keyword search + glossary → 20-30 candidates
+    ↓ Reranking (cross-encoder or LLM-based) → 5-10 tables
+    ↓ FK graph traversal (add necessary join tables) → 5-15 tables
+    ↓ RBAC filter (remove unauthorized) → 3-12 tables
+    ↓ Column pruning (only relevant columns) → 30-80 columns
+    ↓ Schema compression (compact DDL format) → 500-2000 tokens
+</code></pre>
+<p>The SQL Generator never sees more than ~2000 tokens of schema context. This is the key architectural insight: <strong>table selection is a retrieval problem, not a generation problem.</strong></p>
+<hr>
+<h2>6. Retrieval Strategy</h2>
+<h3>Multi-Strategy Retrieval Pipeline</h3>
+<pre><code>Multi-Strategy Retrieval Pipeline:
+
+  User Query + Intent
+      │
+      ├──&gt; Semantic Search (vector similarity on table/column embeddings)
+      ├──&gt; Keyword Search (BM25 on table names, column names, descriptions)
+      ├──&gt; Business Glossary (exact + fuzzy match on business terms)
+      └──&gt; Query History (similar past queries → tables they used)
+            │
+            ▼
+      Merge &amp; Deduplicate (union of all candidates)
+            │
+            ▼
+      Reranker (cross-encoder or LLM-based scoring)
+            │
+            ▼
+      FK Graph Traversal (add join tables if selected tables need bridging)
+            │
+            ▼
+      RBAC Filter (remove tables user cannot access)
+            │
+            ▼
+      Column Pruning (select only relevant columns)
+            │
+            ▼
+      Final Schema Context: 3-15 tables, 30-80 columns
+</code></pre>
+<h3>Strategy Details</h3>
+<h4>1. Semantic Search (Vector Retrieval)</h4>
+<pre><code class="language-python">query_embedding = embed(&quot;top customers by revenue in Europe&quot;)
+
+# Search table descriptions
+table_results = vector_store.similarity_search(
+    query_embedding,
+    collection=&quot;table_descriptions&quot;,
+    top_k=15,
+    filter={&quot;is_active&quot;: True}
+)
+
+# Search column descriptions
+column_results = vector_store.similarity_search(
+    query_embedding,
+    collection=&quot;column_descriptions&quot;,
+    top_k=30,
+    filter={&quot;is_active&quot;: True}
+)
+# Map columns back to their parent tables
+</code></pre>
+<p><strong>Strengths:</strong> Catches semantic matches (&quot;earnings&quot; → &quot;revenue&quot;), handles paraphrasing.
+<strong>Weaknesses:</strong> Can miss exact keyword matches; embedding quality depends on description quality.</p>
+<h4>2. Keyword Search (BM25)</h4>
+<pre><code class="language-python"># Search table names, column names, and descriptions using BM25
+keyword_results = metadata_store.bm25_search(
+    query=&quot;customers revenue Europe&quot;,
+    fields=[&quot;table_name&quot;, &quot;column_name&quot;, &quot;description&quot;, &quot;business_description&quot;],
+    top_k=15
+)
+</code></pre>
+<p><strong>Strengths:</strong> Exact match on table/column names (e.g., <code>dim_customers</code> matches &quot;customers&quot;).
+<strong>Weaknesses:</strong> Misses semantic equivalences.</p>
+<h4>3. Business Glossary Lookup</h4>
+<pre><code class="language-python"># Extract entities from intent
+entities = intent.entities + intent.metrics  # [&quot;customers&quot;, &quot;revenue&quot;]
+
+for entity in entities:
+    # Exact match
+    term = glossary.lookup(entity)
+    if term:
+        mapped_columns = term.column_mappings
+        # These columns&#39; parent tables are high-confidence candidates
+
+    # Fuzzy match for synonyms
+    fuzzy_matches = glossary.fuzzy_search(entity, threshold=0.8)
+</code></pre>
+<p><strong>Strengths:</strong> Highest precision — directly maps business language to schema. Eliminates ambiguity.
+<strong>Weaknesses:</strong> Requires manual curation; coverage may be incomplete.</p>
+<h4>4. Query History Lookup</h4>
+<pre><code class="language-python"># Find similar past queries that were successful
+similar_queries = query_history.search(
+    query_embedding=query_embedding,
+    filters={&quot;was_successful&quot;: True, &quot;feedback_score&quot;: {&quot;$gte&quot;: 0.7}},
+    top_k=5
+)
+
+# Extract tables used in those queries via SQL parsing
+for past_query in similar_queries:
+    tables_used = parse_tables_from_sql(past_query.generated_sql)
+    # These are strong candidates
+</code></pre>
+<p><strong>Strengths:</strong> Leverages proven NL→table mappings from real usage. Gets better over time.
+<strong>Weaknesses:</strong> Cold start problem; biased toward frequently queried tables.</p>
+<h4>5. Reranking</h4>
+<p>After merging candidates from all strategies (typically 20-40 unique tables), a reranker scores each table&#39;s relevance:</p>
+<pre><code class="language-python"># Option A: Cross-encoder reranker (faster, cheaper)
+reranker = CrossEncoder(&quot;cross-encoder/ms-marco-MiniLM-L-12-v2&quot;)
+scores = reranker.predict([
+    (user_query, table.description) for table in candidates
+])
+
+# Option B: LLM-based reranker (more accurate, more expensive)
+rerank_prompt = &quot;&quot;&quot;
+Given the user&#39;s question and a list of database tables,
+score each table&#39;s relevance from 0-10.
+
+Question: {query}
+Tables:
+{table_list_with_descriptions}
+
+Return a JSON array of {table_name, score, reason}.
+&quot;&quot;&quot;
+</code></pre>
+<p>The top 5-10 tables proceed to the next stage.</p>
+<h4>6. FK Graph Traversal (Join Path Discovery)</h4>
+<pre><code class="language-python"># Build adjacency graph from TABLE_RELATIONSHIP table
+fk_graph = build_fk_graph(metadata_store)
+
+# For the selected tables, find shortest join paths
+selected_tables = [&quot;dim_customers&quot;, &quot;fact_orders&quot;]
+join_paths = fk_graph.shortest_paths(selected_tables)
+
+# If two selected tables aren&#39;t directly joinable,
+# add bridge tables (e.g., a junction table)
+bridge_tables = identify_bridge_tables(selected_tables, fk_graph)
+selected_tables += bridge_tables
+</code></pre>
+<p>This ensures the SQL Generator has all the tables needed to write valid JOINs.</p>
+<h3>Minimizing Hallucinations</h3>
+<table>
+<thead>
+<tr>
+<th>Hallucination Type</th>
+<th>Prevention Strategy</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Hallucinated table names</strong></td>
+<td>Validator checks every table in SQL against metadata store</td>
+</tr>
+<tr>
+<td><strong>Hallucinated column names</strong></td>
+<td>Validator checks every column against schema</td>
+</tr>
+<tr>
+<td><strong>Wrong column for a metric</strong></td>
+<td>Business glossary provides authoritative mappings</td>
+</tr>
+<tr>
+<td><strong>Incorrect joins</strong></td>
+<td>FK graph provides validated join paths</td>
+</tr>
+<tr>
+<td><strong>Wrong aggregation logic</strong></td>
+<td>Few-shot examples from query history demonstrate correct patterns</td>
+</tr>
+<tr>
+<td><strong>Fabricated filter values</strong></td>
+<td>Column statistics provide valid value ranges; sample values shown in prompt</td>
+</tr>
+</tbody></table>
+<p>The defense is layered: the prompt minimizes hallucination likelihood, and the Validator catches any that slip through.</p>
+<hr>
+<h2>7. SQL Generation Strategy</h2>
+<h3>Prompt Engineering Strategy</h3>
+<p>The SQL generation prompt is dynamically assembled from multiple components. The goal is to provide maximum signal with minimum tokens.</p>
+<h4>Prompt Template Structure</h4>
+<pre><code>[SYSTEM INSTRUCTIONS]     ~200 tokens  - Role, rules, dialect
+[SCHEMA CONTEXT]           ~500-2000 tokens - Selected tables/columns
+[BUSINESS RULES]          ~100-300 tokens - Glossary definitions
+[FEW-SHOT EXAMPLES]       ~300-600 tokens - 3 similar past queries
+[USER QUERY + INTENT]     ~100-200 tokens - NL question + parsed intent
+[OUTPUT FORMAT]            ~50 tokens  - Expected response structure
+─────────────────────────────────────────
+Total:                     ~1250-3350 tokens
+</code></pre>
+<p>This keeps the input well under 4K tokens, leaving ample room for the model&#39;s reasoning and output.</p>
+<h4>Dynamic Prompt Assembly</h4>
+<pre><code class="language-python">def build_sql_generation_prompt(state: Text2SQLState) -&gt; str:
+    # 1. System instructions (static per dialect)
+    system = DIALECT_PROMPTS[state[&quot;target_dialect&quot;]]  # snowflake|bigquery|redshift
+
+    # 2. Schema context (compressed DDL)
+    schema_context = format_schema_compact(
+        tables=state[&quot;selected_tables&quot;],
+        columns=state[&quot;selected_columns&quot;],
+        join_paths=state[&quot;join_paths&quot;],
+    )
+
+    # 3. Business rules from glossary
+    business_rules = format_glossary_rules(
+        terms=state[&quot;intent&quot;].metrics + state[&quot;intent&quot;].entities
+    )
+
+    # 4. Few-shot examples (retrieved dynamically)
+    examples = retrieve_few_shot_examples(
+        query=state[&quot;user_query&quot;],
+        tables=state[&quot;selected_tables&quot;],
+        top_k=3,
+    )
+
+    # 5. User query + structured intent
+    query_section = format_query_with_intent(
+        query=state[&quot;user_query&quot;],
+        intent=state[&quot;intent&quot;],
+    )
+
+    return PROMPT_TEMPLATE.format(
+        system=system,
+        schema=schema_context,
+        rules=business_rules,
+        examples=examples,
+        query=query_section,
+    )
+</code></pre>
+<h4>Schema Compression</h4>
+<p>Instead of full <code>CREATE TABLE</code> DDL, we use a compact format:</p>
+<pre><code>-- Full DDL (verbose, ~150 tokens per table):
+CREATE TABLE dim_customers (
+    customer_id INTEGER NOT NULL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    region VARCHAR(50),
+    segment VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ...
+);
+
+-- Compressed format (~40 tokens per table):
+dim_customers: customer_id (INT PK), name (VARCHAR), region (VARCHAR), segment (VARCHAR)
+  ↳ &quot;Customer dimension table. region: NA|EMEA|APAC|LATAM&quot;
+</code></pre>
+<p>This 3-4x compression allows the prompt to include more tables without exceeding context limits.</p>
+<h4>Dialect-Specific Instructions</h4>
+<pre><code class="language-python">DIALECT_PROMPTS = {
+    &quot;snowflake&quot;: &quot;&quot;&quot;
+        Use Snowflake SQL syntax.
+        - Use DATE_TRUNC(&#39;quarter&#39;, col) not EXTRACT
+        - Use ILIKE for case-insensitive matching
+        - Use :: for type casting
+        - Qualify column names with table aliases
+    &quot;&quot;&quot;,
+    &quot;bigquery&quot;: &quot;&quot;&quot;
+        Use BigQuery Standard SQL.
+        - Use EXTRACT(QUARTER FROM col) for date parts
+        - Use backticks for table references: `project.dataset.table`
+        - Use SAFE_DIVIDE for division
+    &quot;&quot;&quot;,
+}
+</code></pre>
+<h3>Multi-Step SQL Generation</h3>
+<p>For complex queries, the SQL Generator may use chain-of-thought reasoning:</p>
+<pre><code>Step 1: Identify the base table → fact_orders
+Step 2: Identify the dimension table for customer names → dim_customers
+Step 3: Determine the join → fact_orders.customer_id = dim_customers.customer_id
+Step 4: Apply filter → dim_customers.region = &#39;Europe&#39;
+Step 5: Apply aggregation → SUM(fact_orders.revenue_usd)
+Step 6: Apply grouping → GROUP BY dim_customers.name
+Step 7: Apply ordering → ORDER BY total_revenue DESC
+Step 8: Apply limit → LIMIT 10
+
+Final SQL:
+SELECT c.name, SUM(o.revenue_usd) AS total_revenue
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_id = c.customer_id
+WHERE c.region = &#39;Europe&#39;
+GROUP BY c.name
+ORDER BY total_revenue DESC
+LIMIT 10
+</code></pre>
+<h3>SQL Refinement &amp; Self-Correction Loop</h3>
+<pre><code>SQL Self-Correction Loop:
+
+  SQL Generator ──&gt; Validator ──┬──&gt; [Valid] ──&gt; Execute
+                                └──&gt; [Invalid] ──&gt; Error Feedback ──&gt; SQL Generator (retry)
+                                                                        └──&gt; Validator ──┬──&gt; [Valid] ──&gt; Execute
+                                                                                         └──&gt; [Invalid] ──&gt; Error Feedback ──&gt; SQL Generator (retry 2)
+                                                                                                                                └──&gt; Validator ──┬──&gt; [Valid] ──&gt; Execute
+                                                                                                                                                 └──&gt; [Invalid] ──&gt; Return error to user
+  Maximum 3 attempts before escalating.
+</code></pre>
+<p>Error feedback is specific and actionable:</p>
+<pre><code>Your SQL has the following errors:
+1. Column &quot;total_sales&quot; does not exist in table &quot;fact_orders&quot;.
+   Available numeric columns: revenue_usd, quantity, discount_amount
+2. Missing GROUP BY clause for non-aggregated column &quot;c.name&quot;
+
+Please fix these errors and regenerate the SQL.
+Previous SQL: SELECT c.name, SUM(o.total_sales) FROM ...
+</code></pre>
+<h3>Query Optimization Before Execution</h3>
+<p>The Validator applies these optimizations:</p>
+<ol>
+<li><strong>Add LIMIT if missing</strong>: Default <code>LIMIT 1000</code> for unbounded queries</li>
+<li><strong>Add partition filter</strong>: If the table is partitioned by date and the query has a time range, ensure the WHERE clause uses the partition column</li>
+<li>**Replace SELECT ***: Narrow to only needed columns</li>
+<li><strong>Push down predicates</strong>: Ensure filters are as close to the base table scan as possible</li>
+<li><strong>Suggest materialized views</strong>: If a pre-aggregated materialized view exists that satisfies the query, suggest using it</li>
+</ol>
+<hr>
+<h2>8. Security &amp; Enterprise Guardrails</h2>
+<h3>Security Architecture Overview</h3>
+<pre><code class="language-mermaid">graph LR
+    L1[&quot;Layer 1: Perimeter&lt;br/&gt;TLS, OAuth2, Rate Limiting&quot;]
+    L2[&quot;Layer 2: Input&lt;br/&gt;Injection Detection, Validation&quot;]
+    L3[&quot;Layer 3: Access Control&lt;br/&gt;RBAC, ABAC, Row/Column Security&quot;]
+    L4[&quot;Layer 4: SQL Safety&lt;br/&gt;Read-Only, Cost Guardrails&quot;]
+    L5[&quot;Layer 5: Output&lt;br/&gt;PII Detection, Data Masking&quot;]
+    L6[&quot;Layer 6: Audit&lt;br/&gt;Immutable Log, Approvals&quot;]
+    L1 --&gt; L2 --&gt; L3 --&gt; L4 --&gt; L5 --&gt; L6
+</code></pre>
+<h3>Guardrail Details</h3>
+<h4>Prompt Injection Protection (Layer 2 — Intent Agent)</h4>
+<p><strong>Where enforced:</strong> Before the user query reaches any LLM.</p>
+<pre><code class="language-python">class PromptInjectionDetector:
+    &quot;&quot;&quot;Detects attempts to manipulate LLM behavior via the user query.&quot;&quot;&quot;
+
+    INJECTION_PATTERNS = [
+        r&quot;ignore\s+(previous|above|all)\s+instructions&quot;,
+        r&quot;you\s+are\s+now\s+a&quot;,
+        r&quot;system\s*prompt&quot;,
+        r&quot;pretend\s+(you|to)\s+&quot;,
+        r&quot;&lt;\s*system\s*&gt;&quot;,
+        r&quot;```\s*(system|prompt)&quot;,
+    ]
+
+    def detect(self, user_query: str) -&gt; InjectionResult:
+        # 1. Regex pattern matching (fast, high precision)
+        for pattern in self.INJECTION_PATTERNS:
+            if re.search(pattern, user_query, re.IGNORECASE):
+                return InjectionResult(detected=True, method=&quot;regex&quot;)
+
+        # 2. ML classifier (trained on injection datasets)
+        score = self.classifier.predict(user_query)
+        if score &gt; 0.85:
+            return InjectionResult(detected=True, method=&quot;classifier&quot;)
+
+        return InjectionResult(detected=False)
+</code></pre>
+<p><strong>Response:</strong> Reject the query with a generic message. Do not explain what was detected (to avoid helping attackers iterate).</p>
+<h4>RBAC &amp; ABAC (Layer 3 — Schema Agent)</h4>
+<pre><code class="language-python">class AccessControlEngine:
+    &quot;&quot;&quot;Evaluates user access against table and column policies.&quot;&quot;&quot;
+
+    def check_table_access(self, user: UserContext, table: str) -&gt; bool:
+        # RBAC: Role-based check
+        if table in self.role_table_map.get(user.role, []):
+            return True
+
+        # ABAC: Attribute-based check (department, org, custom attributes)
+        policy = self.get_policy(table)
+        return policy.evaluate(user.attributes)
+
+    def check_column_access(self, user: UserContext, table: str, column: str) -&gt; bool:
+        col_meta = self.metadata.get_column(table, column)
+        if col_meta.is_sensitive and &quot;sensitive_data_viewer&quot; not in user.roles:
+            return False
+        return True
+
+    def apply_row_level_security(self, sql: str, user: UserContext) -&gt; str:
+        &quot;&quot;&quot;Inject row-level predicates based on user&#39;s data scope.&quot;&quot;&quot;
+        # Example: sales reps can only see their own region
+        if user.role == &quot;sales_rep&quot;:
+            sql = inject_where_clause(sql, f&quot;region = &#39;{user.region}&#39;&quot;)
+        return sql
+</code></pre>
+<p><strong>Where enforced:</strong></p>
+<ul>
+<li><strong>Table-level RBAC</strong>: Schema Agent filters out unauthorized tables before they reach the SQL Generator</li>
+<li><strong>Column-level access</strong>: Validator checks column permissions after SQL is generated</li>
+<li><strong>Row-level security</strong>: Validator injects row-level predicates into the SQL</li>
+</ul>
+<h4>SQL Safety (Layer 4 — Validator Agent + Query Proxy)</h4>
+<p><strong>Read-Only Enforcement (defense in depth):</strong></p>
+<ol>
+<li><strong>Validator Agent</strong> (application layer): Parse SQL AST; reject any statement that is not <code>SELECT</code></li>
+<li><strong>Query Proxy</strong> (infrastructure layer): Database connection uses a read-only user with <code>GRANT SELECT</code> only</li>
+<li><strong>Database role</strong> (warehouse layer): The service account has no write permissions</li>
+</ol>
+<pre><code class="language-python">DANGEROUS_SQL_PATTERNS = [
+    # DML/DDL
+    r&quot;\b(INSERT|UPDATE|DELETE|DROP|TRUNCATE|ALTER|CREATE|GRANT|REVOKE)\b&quot;,
+    # System commands
+    r&quot;\b(EXEC|EXECUTE|CALL|COPY\s+INTO)\b&quot;,
+    # Unbounded operations
+    r&quot;SELECT\s+\*\s+FROM\s+\w+\s*$&quot;,  # SELECT * without WHERE or LIMIT
+    # Cross-database access attempts
+    r&quot;\b(INFORMATION_SCHEMA|PG_CATALOG|SYS\.)\b&quot;,
+]
+</code></pre>
+<p><strong>Dangerous Query Detection:</strong></p>
+<ul>
+<li><code>CROSS JOIN</code> without <code>WHERE</code> clause → potential cartesian product</li>
+<li><code>SELECT *</code> on tables with 100M+ rows → potential warehouse cost spike</li>
+<li>Queries estimated to scan &gt;10TB → require approval</li>
+<li>Nested subqueries deeper than 4 levels → flag for review</li>
+</ul>
+<h4>PII Protection &amp; Data Masking (Layer 5 — Formatter Agent)</h4>
+<pre><code class="language-python">class PIIProtector:
+    &quot;&quot;&quot;Detects and masks PII in query results.&quot;&quot;&quot;
+
+    def scan_and_mask(self, results: list[dict], user: UserContext) -&gt; list[dict]:
+        masked_results = []
+        for row in results:
+            masked_row = {}
+            for col, val in row.items():
+                col_meta = self.metadata.get_column_by_name(col)
+
+                # Column-level masking policy
+                if col_meta and col_meta.masking_policy:
+                    masked_row[col] = self.apply_mask(val, col_meta.masking_policy)
+
+                # Content-based PII detection (catch unlabeled PII)
+                elif self.pii_detector.contains_pii(str(val)):
+                    masked_row[col] = self.redact(val)
+
+                else:
+                    masked_row[col] = val
+
+            masked_results.append(masked_row)
+        return masked_results
+
+    def apply_mask(self, value, policy: str) -&gt; str:
+        match policy:
+            case &quot;redact&quot;:    return &quot;***REDACTED***&quot;
+            case &quot;hash&quot;:      return hashlib.sha256(str(value).encode()).hexdigest()[:12]
+            case &quot;truncate&quot;:  return str(value)[:3] + &quot;***&quot;
+            case &quot;email&quot;:     return re.sub(r&#39;(.{2}).*@&#39;, r&#39;\1***@&#39;, str(value))
+</code></pre>
+<p><strong>Sensitive Column Detection:</strong></p>
+<ul>
+<li>Columns marked <code>is_pii=True</code> or <code>is_sensitive=True</code> in metadata store</li>
+<li>Auto-detection during schema sync: column names matching patterns like <code>ssn</code>, <code>social_security</code>, <code>credit_card</code>, <code>email</code>, <code>phone</code>, <code>password</code>, <code>salary</code></li>
+<li>Presidio-based content scanning on query results as a final safeguard</li>
+</ul>
+<h4>Rate Limiting (Layer 1)</h4>
+<pre><code>Per-user:       20 queries/minute, 200 queries/hour
+Per-org:        500 queries/minute
+LLM tokens:    100K tokens/hour per user
+Expensive queries: 5/hour per user (queries estimated &gt;$1 in warehouse compute)
+</code></pre>
+<h4>Approval Workflows (Layer 6)</h4>
+<p>Certain queries require human approval before execution:</p>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Approver</th>
+<th>SLA</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Query scans &gt;10TB</td>
+<td>Data Engineering On-Call</td>
+<td>15 min</td>
+</tr>
+<tr>
+<td>Query accesses restricted tables</td>
+<td>Data Owner</td>
+<td>30 min</td>
+</tr>
+<tr>
+<td>Query returns &gt;100K rows</td>
+<td>User&#39;s Manager</td>
+<td>5 min</td>
+</tr>
+</tbody></table>
+<p>The LangGraph interrupt mechanism pauses execution and notifies the approver via Slack/email. The graph resumes when approved.</p>
+<h4>Audit Logging</h4>
+<p>Every query produces an immutable audit record:</p>
+<pre><code class="language-json">{
+  &quot;trace_id&quot;: &quot;abc-123&quot;,
+  &quot;timestamp&quot;: &quot;2026-06-25T10:30:00Z&quot;,
+  &quot;user_id&quot;: &quot;analyst@corp.com&quot;,
+  &quot;user_role&quot;: &quot;data_analyst&quot;,
+  &quot;natural_language_query&quot;: &quot;Top 10 customers by revenue in Europe&quot;,
+  &quot;parsed_intent&quot;: { ... },
+  &quot;tables_accessed&quot;: [&quot;dim_customers&quot;, &quot;fact_orders&quot;],
+  &quot;columns_accessed&quot;: [&quot;name&quot;, &quot;revenue_usd&quot;, &quot;region&quot;, &quot;customer_id&quot;],
+  &quot;generated_sql&quot;: &quot;SELECT ...&quot;,
+  &quot;validation_result&quot;: &quot;passed&quot;,
+  &quot;rows_returned&quot;: 10,
+  &quot;execution_time_ms&quot;: 245,
+  &quot;pii_detected&quot;: false,
+  &quot;masking_applied&quot;: false,
+  &quot;feedback&quot;: &quot;thumbs_up&quot;,
+  &quot;total_tokens_used&quot;: 2847,
+  &quot;total_latency_ms&quot;: 1823
+}
+</code></pre>
+<p>Stored in an append-only table (or shipped to a SIEM like Splunk) for compliance.</p>
+<hr>
+<h2>9. Failure Scenarios</h2>
+<h3>Failure Handling Matrix</h3>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Detection Point</th>
+<th>Response</th>
+<th>Retry?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Ambiguous question</strong></td>
+<td>Intent Agent</td>
+<td><code>NodeInterrupt</code> → ask clarification</td>
+<td>N/A (human resolves)</td>
+</tr>
+<tr>
+<td><strong>Missing metadata</strong></td>
+<td>Schema Agent</td>
+<td>Return &quot;I don&#39;t have information about {entity}. Available domains: ...&quot;</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Multiple valid interpretations</strong></td>
+<td>Intent Agent</td>
+<td>Present top 2-3 interpretations, ask user to choose</td>
+<td>N/A (human resolves)</td>
+</tr>
+<tr>
+<td><strong>Invalid SQL (syntax)</strong></td>
+<td>Validator Agent</td>
+<td>Return parse error to SQL Generator with fix hints</td>
+<td>Yes, up to 3x</td>
+</tr>
+<tr>
+<td><strong>Invalid SQL (schema)</strong></td>
+<td>Validator Agent</td>
+<td>Return &quot;column X doesn&#39;t exist, available: [Y, Z]&quot; to SQL Generator</td>
+<td>Yes, up to 3x</td>
+</tr>
+<tr>
+<td><strong>Database timeout</strong></td>
+<td>Executor Agent</td>
+<td>Cancel query, suggest simplification: &quot;Try adding a date filter or reducing the scope&quot;</td>
+<td>Once with 2x timeout</td>
+</tr>
+<tr>
+<td><strong>Hallucinated tables</strong></td>
+<td>Validator Agent</td>
+<td>Caught by schema validation; return to SQL Generator with correct table list</td>
+<td>Yes, up to 3x</td>
+</tr>
+<tr>
+<td><strong>Hallucinated columns</strong></td>
+<td>Validator Agent</td>
+<td>Caught by schema validation; return to SQL Generator with correct column list</td>
+<td>Yes, up to 3x</td>
+</tr>
+<tr>
+<td><strong>Empty results</strong></td>
+<td>Executor Agent</td>
+<td>Return: &quot;No results found. This could mean: (1) No data matches your filters, (2) The date range may be too narrow. Suggestions: ...&quot;</td>
+<td>No, but suggest modified query</td>
+</tr>
+<tr>
+<td><strong>Permission denied</strong></td>
+<td>Schema Agent / Validator</td>
+<td>&quot;You don&#39;t have access to {table}. Contact your admin to request access.&quot;</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Expensive query</strong></td>
+<td>Validator Agent</td>
+<td><code>NodeInterrupt</code> → require approval or suggest optimization</td>
+<td>N/A (approval flow)</td>
+</tr>
+<tr>
+<td><strong>Long-running query</strong></td>
+<td>Executor Agent</td>
+<td>Progressive timeout: 30s → warn user → 60s → cancel</td>
+<td>No, suggest simplification</td>
+</tr>
+<tr>
+<td><strong>LLM API failure (5xx)</strong></td>
+<td>LLM Gateway</td>
+<td>Retry with exponential backoff (3 attempts), then fallback to secondary LLM</td>
+<td>Yes, with fallback</td>
+</tr>
+<tr>
+<td><strong>LLM rate limit (429)</strong></td>
+<td>LLM Gateway</td>
+<td>Queue and retry after <code>Retry-After</code> header; degrade gracefully</td>
+<td>Yes, with backoff</td>
+</tr>
+<tr>
+<td><strong>Tool failure</strong></td>
+<td>Any Agent</td>
+<td>Log error, retry once; if persistent, skip tool and degrade (e.g., skip few-shot examples)</td>
+<td>Once</td>
+</tr>
+<tr>
+<td><strong>Partial failure</strong> (e.g., vector search down)</td>
+<td>Schema Agent</td>
+<td>Fall back to keyword search + glossary only; warn that results may be less accurate</td>
+<td>No, degrade gracefully</td>
+</tr>
+</tbody></table>
+<h3>Detailed Failure Flows</h3>
+<h4>Ambiguous Question Flow</h4>
+<pre><code>Ambiguous Question Flow:
+
+  User: &quot;Show me the revenue&quot;
+      └──&gt; Intent Agent detects: &quot;revenue&quot; maps to 3 columns
+              └──&gt; Clarification: &quot;Which revenue metric?
+                    1. Gross Revenue (before refunds)
+                    2. Net Revenue (after refunds)
+                    3. Recognized Revenue (accounting)&quot;
+                        └──&gt; User: &quot;Net Revenue&quot;
+                              └──&gt; Intent Agent re-enters with clarification ──&gt; Continue pipeline
+</code></pre>
+<h4>Self-Correction Loop</h4>
+<pre><code>Attempt 1:
+  SQL: SELECT customer_name, SUM(total_sales) FROM orders ...
+  Validation Error: Column &quot;customer_name&quot; does not exist in &quot;orders&quot;.
+                    Available: customer_id, order_id, amount, ...
+                    Did you mean dim_customers.name? Join via customer_id.
+
+Attempt 2:
+  SQL: SELECT c.name, SUM(o.amount) FROM orders o
+       JOIN dim_customers c ON o.customer_id = c.customer_id ...
+  Validation: ✓ PASSED
+
+(Errors from previous attempts are included in the retry prompt
+ so the LLM doesn&#39;t repeat the same mistake.)
+</code></pre>
+<h4>Graceful Degradation</h4>
+<p>If the vector store is temporarily unavailable:</p>
+<ol>
+<li>Schema Agent detects the failure</li>
+<li>Falls back to keyword search (BM25) + business glossary only</li>
+<li>Adds caveat to response: &quot;Note: Semantic search was unavailable. Results may be less precise.&quot;</li>
+<li>Alert fires in monitoring for the vector store outage</li>
+</ol>
+<hr>
+<h2>10. Scalability</h2>
+<h3>Scaling Dimensions</h3>
+<pre><code>Scaling Dimensions:
+
+  Horizontal Scaling             Data Scaling                  Multi-Warehouse
+  ────────────────────           ─────────────────             ────────────────────
+  API Gateway (auto-scale)       Metadata Store (PG replicas)  Snowflake (Sales)
+  Orchestration (stateless)      Vector Store (sharded)        BigQuery (Marketing)
+  LangGraph Workers (K8s)        Redis Cluster (cache)         Redshift (Finance)
+</code></pre>
+<h3>Thousands of Tables</h3>
+<ul>
+<li><strong>Metadata store</strong>: PostgreSQL handles 10,000+ tables with proper indexing. No scalability concern.</li>
+<li><strong>Vector index</strong>: 50,000 column embeddings with HNSW index → sub-millisecond search. pgvector handles this easily. At 500K+ embeddings, migrate to Pinecone or Weaviate.</li>
+<li><strong>Schema sync</strong>: Incremental sync (only changed objects) keeps sync time under 5 minutes even for 10,000+ tables.</li>
+<li><strong>Domain partitioning</strong>: Tables are tagged by domain (sales, marketing, finance). The Schema Agent searches within the user&#39;s domain first, expanding only if needed. This reduces the search space by 5-10x.</li>
+</ul>
+<h3>Millions to Billions of Rows</h3>
+<p>The Text-to-SQL platform doesn&#39;t scan data — the warehouse does. Our concerns are:</p>
+<ul>
+<li><strong>Query cost governance</strong>: The Query Governor estimates scan size before execution and blocks expensive queries</li>
+<li><strong>Partition awareness</strong>: The SQL Generator is taught to include partition filters (e.g., date ranges) to minimize scanned data</li>
+<li><strong>Materialized view routing</strong>: If a pre-aggregated view exists for common query patterns, the Schema Agent can route to it instead of base tables</li>
+<li><strong>Result pagination</strong>: Large result sets are paginated; the Formatter shows the first 100 rows with a &quot;download full results&quot; option</li>
+</ul>
+<h3>Multiple Databases &amp; Warehouses</h3>
+<pre><code class="language-python">class WarehouseRouter:
+    &quot;&quot;&quot;Routes queries to the correct warehouse based on domain.&quot;&quot;&quot;
+
+    def __init__(self):
+        self.domain_warehouse_map = {
+            &quot;sales&quot;: WarehouseConfig(type=&quot;snowflake&quot;, conn=&quot;...&quot;),
+            &quot;marketing&quot;: WarehouseConfig(type=&quot;bigquery&quot;, conn=&quot;...&quot;),
+            &quot;finance&quot;: WarehouseConfig(type=&quot;redshift&quot;, conn=&quot;...&quot;),
+        }
+
+    def route(self, tables: list[TableSchema]) -&gt; dict[str, list[TableSchema]]:
+        &quot;&quot;&quot;Group selected tables by their warehouse.&quot;&quot;&quot;
+        grouped = defaultdict(list)
+        for table in tables:
+            warehouse = self.domain_warehouse_map[table.domain]
+            grouped[warehouse].append(table)
+        return grouped
+</code></pre>
+<p><strong>Cross-database queries</strong>: If a query spans multiple warehouses, the system either:</p>
+<ol>
+<li><strong>Federated query</strong>: Uses the warehouse&#39;s native federation (e.g., Snowflake external tables)</li>
+<li><strong>Application-level join</strong>: Executes subqueries against each warehouse, then joins results in the application layer (for small result sets only)</li>
+<li><strong>Decline</strong>: If the cross-database join is too complex, inform the user and suggest breaking it into separate queries</li>
+</ol>
+<h3>Concurrent Users</h3>
+<ul>
+<li><strong>Orchestration Service</strong>: Stateless; horizontally scaled behind a load balancer. Each request is independent.</li>
+<li><strong>LangGraph execution</strong>: Each query gets its own graph invocation with a unique thread_id. No shared mutable state between users.</li>
+<li><strong>LLM concurrency</strong>: The LLM Gateway manages a token bucket per model endpoint. Under high load, requests are queued with priority (interactive queries &gt; batch queries).</li>
+<li><strong>Database connections</strong>: Connection pool per warehouse, sized per tenant. Connection exhaustion triggers queuing, not failure.</li>
+<li><strong>Target</strong>: 100+ concurrent users with p95 latency &lt;5s for simple queries.</li>
+</ul>
+<h3>Caching Strategy</h3>
+<pre><code>┌─────────────────────────────────────────────────────┐
+│  L1: Semantic Query Cache (Redis)                    │
+│  Key: embedding of NL query (cosine &gt; 0.95 = hit)    │
+│  Value: final formatted response                     │
+│  TTL: 1 hour                                         │
+│  Hit rate: ~15-25% (many queries are variations)     │
+├─────────────────────────────────────────────────────┤
+│  L2: SQL Result Cache (Redis)                        │
+│  Key: hash(SQL + warehouse + user_permissions)       │
+│  Value: query results                                │
+│  TTL: 15 min (or until underlying table updates)     │
+│  Hit rate: ~10-15%                                   │
+├─────────────────────────────────────────────────────┤
+│  L3: Metadata Cache (In-process + Redis)             │
+│  Key: table/column metadata                          │
+│  Value: schema objects, embeddings                   │
+│  TTL: 6 hours (refreshed by sync)                    │
+│  Hit rate: ~95%+ (metadata changes infrequently)     │
+└─────────────────────────────────────────────────────┘
+</code></pre>
+<h3>Cost Optimization</h3>
+<table>
+<thead>
+<tr>
+<th>Cost Driver</th>
+<th>Optimization</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLM tokens</td>
+<td>Semantic cache avoids redundant LLM calls; schema compression reduces input tokens; smaller models for classification tasks</td>
+</tr>
+<tr>
+<td>Warehouse compute</td>
+<td>Query Governor blocks expensive queries; partition filters reduce scan size; result caching</td>
+</tr>
+<tr>
+<td>Vector search</td>
+<td>pgvector (no additional cost) for &lt;100K embeddings; dedicated vector DB only at scale</td>
+</tr>
+<tr>
+<td>Infrastructure</td>
+<td>Stateless services scale to zero during off-hours; spot instances for non-critical workers</td>
+</tr>
+</tbody></table>
+<h3>Multiple LLMs</h3>
+<pre><code class="language-python">class LLMGateway:
+    &quot;&quot;&quot;Routes LLM calls based on task type and availability.&quot;&quot;&quot;
+
+    ROUTING = {
+        &quot;intent_classification&quot;: &quot;claude-haiku-4-5&quot;,      # Fast, cheap
+        &quot;schema_reranking&quot;:      &quot;claude-haiku-4-5&quot;,      # Fast, cheap
+        &quot;sql_generation&quot;:        &quot;claude-sonnet-4-6&quot;,      # Best balance
+        &quot;sql_validation&quot;:        &quot;claude-haiku-4-5&quot;,      # Mostly rule-based
+        &quot;response_formatting&quot;:   &quot;claude-haiku-4-5&quot;,      # Simple task
+        &quot;complex_sql&quot;:           &quot;claude-opus-4-6&quot;,        # Complex reasoning
+    }
+
+    FALLBACK_CHAIN = [&quot;claude-sonnet-4-6&quot;, &quot;gpt-4o&quot;, &quot;claude-haiku-4-5&quot;]
+</code></pre>
+<p>Using smaller models for simpler tasks (intent classification, formatting) reduces cost by 5-10x compared to using the most capable model for everything.</p>
+<hr>
+<h2>11. Observability</h2>
+<h3>Observability Stack</h3>
+<pre><code>  Collection                Transport             Storage &amp; Analysis        Visualization
+  ──────────────            ─────────             ──────────────────        ─────────────
+  OpenTelemetry ──────────&gt; OTel Collector ──────&gt; Jaeger (Traces)    ──┐
+  (Traces + Metrics)                         └──&gt; Prometheus (Metrics) ├──&gt; Grafana ──&gt; PagerDuty
+  LangSmith (LLM traces)                                               │
+  Structured Logging ────&gt; Fluentd/Vector ──────&gt; Elasticsearch (Logs)─┘
+</code></pre>
+<h3>Key Metrics</h3>
+<h4>Agent-Level Traces</h4>
+<p>Every LangGraph execution produces a trace with spans for each agent:</p>
+<pre><code>Trace: query-abc-123 (total: 2.1s)
+├── authenticate          12ms
+├── intent_agent         340ms  (LLM: 280ms, tools: 60ms)
+├── schema_agent         620ms  (vector_search: 45ms, bm25: 30ms, rerank: 200ms, fk_graph: 15ms, rbac: 10ms, LLM: 320ms)
+├── sql_generator        780ms  (few_shot_retrieval: 80ms, LLM: 700ms)
+├── validator_agent      130ms  (parse: 5ms, schema_check: 15ms, rbac_check: 10ms, LLM: 100ms)
+├── executor_agent       245ms  (query_execution: 240ms, overhead: 5ms)
+└── formatter_agent      280ms  (pii_scan: 30ms, LLM: 250ms)
+</code></pre>
+<h4>Dashboards</h4>
+<table>
+<thead>
+<tr>
+<th>Dashboard</th>
+<th>Metrics</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Request Overview</strong></td>
+<td>Total queries/min, p50/p95/p99 latency, success rate, cache hit rate</td>
+</tr>
+<tr>
+<td><strong>Agent Performance</strong></td>
+<td>Per-agent latency, retry rate, failure rate</td>
+</tr>
+<tr>
+<td><strong>LLM Usage</strong></td>
+<td>Tokens in/out per model, cost/hour, latency per model, error rate</td>
+</tr>
+<tr>
+<td><strong>SQL Quality</strong></td>
+<td>Validation pass rate, self-correction rate, avg retries before success</td>
+</tr>
+<tr>
+<td><strong>User Experience</strong></td>
+<td>Feedback scores (thumbs up %), clarification rate, empty result rate</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>Blocked queries (injection attempts, permission denied), PII detections</td>
+</tr>
+<tr>
+<td><strong>Cost</strong></td>
+<td>LLM cost/query, warehouse compute cost/query, total platform cost/day</td>
+</tr>
+</tbody></table>
+<h4>Prompt &amp; SQL Logging</h4>
+<p>All prompts and SQL are logged (with PII redaction) for debugging:</p>
+<pre><code class="language-python">logger.info(&quot;sql_generated&quot;, extra={
+    &quot;trace_id&quot;: state[&quot;trace_id&quot;],
+    &quot;user_id&quot;: state[&quot;user_id&quot;],  # pseudonymized in non-prod
+    &quot;prompt_tokens&quot;: 2100,
+    &quot;completion_tokens&quot;: 350,
+    &quot;model&quot;: &quot;claude-sonnet-4-6&quot;,
+    &quot;sql&quot;: state[&quot;generated_sql&quot;],
+    &quot;tables_used&quot;: [&quot;dim_customers&quot;, &quot;fact_orders&quot;],
+    &quot;validation_passed&quot;: True,
+    &quot;confidence&quot;: 0.92,
+})
+</code></pre>
+<h4>Alerting Rules</h4>
+<table>
+<thead>
+<tr>
+<th>Alert</th>
+<th>Condition</th>
+<th>Severity</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>High error rate</td>
+<td>&gt;5% of queries fail in 5min window</td>
+<td>P1</td>
+<td>Page on-call</td>
+</tr>
+<tr>
+<td>LLM degradation</td>
+<td>p95 LLM latency &gt;5s</td>
+<td>P2</td>
+<td>Investigate, consider fallback</td>
+</tr>
+<tr>
+<td>Schema sync failure</td>
+<td>Sync hasn&#39;t completed in 12 hours</td>
+<td>P2</td>
+<td>Check warehouse connectivity</td>
+</tr>
+<tr>
+<td>Injection spike</td>
+<td>&gt;10 injection attempts in 1 hour</td>
+<td>P1</td>
+<td>Rate limit source IP/user</td>
+</tr>
+<tr>
+<td>Cost anomaly</td>
+<td>Daily LLM cost &gt;2x rolling 7-day average</td>
+<td>P3</td>
+<td>Review query patterns</td>
+</tr>
+<tr>
+<td>Low feedback score</td>
+<td>Rolling 24h thumbs-up rate &lt;60%</td>
+<td>P3</td>
+<td>Review recent failing queries</td>
+</tr>
+</tbody></table>
+<h4>User Feedback Collection</h4>
+<pre><code>┌──────────────────────────────────────────────┐
+│  Your answer:                                │
+│  The top customer in Europe by revenue is    │
+│  Acme Corp with $12.4M...                    │
+│                                              │
+│  SQL used: SELECT c.name, SUM(...)           │
+│                                              │
+│  Was this helpful?  👍  👎                   │
+│                                              │
+│  [Correct the SQL] [Report issue]            │
+└──────────────────────────────────────────────┘
+</code></pre>
+<p>Feedback flows:</p>
+<ol>
+<li><strong>Thumbs up</strong>: Stores the NL→SQL pair with a positive score; becomes a candidate for few-shot examples</li>
+<li><strong>Thumbs down</strong>: Flags for review; analyst can optionally provide the correct SQL</li>
+<li><strong>SQL correction</strong>: Stores the corrected SQL; the original is marked as incorrect</li>
+<li><strong>Periodic review</strong>: Data team reviews low-scoring queries weekly to improve glossary, metadata descriptions, and prompts</li>
+</ol>
+<hr>
+<h2>12. Workspace Strategy</h2>
+<h3>Why Workspaces?</h3>
+<p>With 1000+ tables, even a strong retrieval pipeline (vector search + keyword + glossary) can produce noisy results. The search space is simply too large for reliable table selection. <strong>Workspaces</strong> solve this by pre-partitioning the schema into curated, domain-scoped collections — reducing the effective search space from 1000+ tables to 50-200 per workspace.</p>
+<p>This is the single most impactful accuracy lever in the system. Without workspaces, the Schema Agent must search across all tables, leading to:</p>
+<ul>
+<li>False positives (irrelevant tables with similar descriptions)</li>
+<li>Cross-domain confusion (&quot;revenue&quot; exists in sales, finance, and marketing schemas with different semantics)</li>
+<li>Larger prompts (more candidate tables = more noise for the SQL Generator)</li>
+</ul>
+<h3>Workspace Architecture</h3>
+<pre><code>Relationships:
+  ORGANIZATION 1──* WORKSPACE 1──* WORKSPACE_TABLE *──1 TABLE_META
+                    WORKSPACE 1──* WORKSPACE_EXAMPLE
+                    WORKSPACE 1──* WORKSPACE_GLOSSARY *──1 BUSINESS_TERM
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Key Columns</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>WORKSPACE</code></td>
+<td>id, org_id (FK), name, description, domain, type (system|custom), owner_team, is_active</td>
+</tr>
+<tr>
+<td><code>WORKSPACE_TABLE</code></td>
+<td>id, workspace_id (FK), table_id (FK), role (primary|supporting|reference), priority</td>
+</tr>
+<tr>
+<td><code>WORKSPACE_EXAMPLE</code></td>
+<td>id, workspace_id (FK), natural_language_query, sql_query, explanation, quality_score, is_verified, query_embedding (vector)</td>
+</tr>
+<tr>
+<td><code>WORKSPACE_GLOSSARY</code></td>
+<td>id, workspace_id (FK), term_id (FK), workspace_specific_definition</td>
+</tr>
+</tbody></table>
+<h3>Workspace Types</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+<th>Example</th>
+<th>Managed By</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>System Workspace</strong></td>
+<td>Pre-built by data engineering for major business domains. Curated table sets, verified examples, domain-specific glossary.</td>
+<td>&quot;Sales Analytics&quot; — 80 tables, 50 SQL examples, sales-specific glossary</td>
+<td>Data Engineering team</td>
+</tr>
+<tr>
+<td><strong>Custom Workspace</strong></td>
+<td>Created by teams or individuals for niche use cases, projects, or cross-domain analysis.</td>
+<td>&quot;Q4 Campaign Analysis&quot; — 30 tables from marketing + sales</td>
+<td>Any user with create permission</td>
+</tr>
+<tr>
+<td><strong>Auto-Generated Workspace</strong></td>
+<td>System-generated from usage patterns — tables frequently queried together are clustered into suggested workspaces.</td>
+<td>&quot;Customer 360&quot; — auto-detected cluster of customer-related tables</td>
+<td>System (requires admin approval to activate)</td>
+</tr>
+</tbody></table>
+<h3>How Workspaces Integrate with the Agent Pipeline</h3>
+<pre><code>Workspace Integration Flow:
+
+  User Query ──&gt; Intent Agent ──&gt; Workspace Selection
+                                      ├──&gt; Single workspace  ──&gt; Schema Agent (scoped search)   ──&gt; SQL Generator
+                                      ├──&gt; Multiple workspaces ──&gt; Schema Agent (cross-workspace) ──&gt; SQL Generator
+                                      └──&gt; No match           ──&gt; Schema Agent (global + warning) ──&gt; SQL Generator
+</code></pre>
+<p><strong>Workspace selection logic:</strong></p>
+<ol>
+<li><strong>User-specified</strong>: If the user has a default workspace or explicitly selects one (via UI dropdown or query prefix like &quot;[Sales] top customers by revenue&quot;), use that workspace directly.</li>
+<li><strong>Intent-based routing</strong>: The Intent Agent classifies the query&#39;s domain and maps it to 1-2 workspaces. This uses a combination of:<ul>
+<li>Keyword matching against workspace names/descriptions</li>
+<li>Semantic similarity between query embedding and workspace description embeddings</li>
+<li>User&#39;s department and historical workspace usage patterns</li>
+</ul>
+</li>
+<li><strong>Multi-workspace queries</strong>: If the query spans domains (e.g., &quot;compare marketing spend to sales revenue&quot;), the Schema Agent searches across the relevant workspaces and flags the cross-domain nature.</li>
+<li><strong>Fallback</strong>: If no workspace matches confidently, fall back to global search with a caveat.</li>
+</ol>
+<h3>Impact on Retrieval Quality</h3>
+<pre><code>Without workspaces:
+  1000+ tables → vector search → 20-30 candidates (noisy) → rerank → 10 tables
+  Table selection accuracy: ~70-75%
+
+With workspaces:
+  1000+ tables → workspace filter → 50-200 tables → vector search → 10-15 candidates (focused) → rerank → 5-8 tables
+  Table selection accuracy: ~88-92%
+</code></pre>
+<p>The workspace pre-filter eliminates most false positives before vector search even runs, dramatically improving downstream accuracy.</p>
+<h3>Few-Shot Examples per Workspace</h3>
+<p>Each workspace contains <strong>curated NL→SQL examples</strong> that serve as few-shot context for the SQL Generator:</p>
+<ul>
+<li><strong>Verified examples</strong>: Manually reviewed and approved by domain experts (highest priority)</li>
+<li><strong>High-feedback examples</strong>: Automatically promoted from query history when users give positive feedback</li>
+<li><strong>Diverse coverage</strong>: Examples cover different query patterns (ranking, aggregation, trend, comparison) for the workspace&#39;s tables</li>
+</ul>
+<p>When the SQL Generator runs, it retrieves few-shot examples <strong>from the active workspace first</strong>, falling back to global query history only if workspace examples are insufficient.</p>
+<h3>Workspace Lifecycle</h3>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>New tables added to warehouse</td>
+<td>Schema sync notifies workspace owners; new tables suggested for relevant workspaces</td>
+</tr>
+<tr>
+<td>Table dropped</td>
+<td>Removed from workspaces; examples referencing it are flagged for review</td>
+</tr>
+<tr>
+<td>Low query accuracy in a workspace</td>
+<td>Alert to workspace owner; triggers review of examples and glossary entries</td>
+</tr>
+<tr>
+<td>Workspace unused for 90 days</td>
+<td>Auto-archived; can be restored</td>
+</tr>
+<tr>
+<td>User creates custom workspace</td>
+<td>Available only to creator initially; can be shared with team or promoted to system workspace</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>13. Evaluation &amp; Testing Strategy</h2>
+<h3>Why This Matters</h3>
+<p>A Text-to-SQL system without a rigorous evaluation framework is flying blind. Prompt changes, model upgrades, schema modifications, and retrieval tuning can all silently degrade quality. The evaluation strategy ensures:</p>
+<ul>
+<li><strong>Measurable quality</strong>: Concrete accuracy metrics that can be tracked over time</li>
+<li><strong>Regression prevention</strong>: Automated tests that catch quality degradation before it reaches production</li>
+<li><strong>Continuous improvement</strong>: Feedback loops that systematically improve the system</li>
+</ul>
+<h3>Evaluation Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Definition</th>
+<th>Target</th>
+<th>How Measured</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Execution Accuracy (EX)</strong></td>
+<td>% of queries where the generated SQL produces the correct result set</td>
+<td>≥ 85%</td>
+<td>Compare results against gold-standard SQL</td>
+</tr>
+<tr>
+<td><strong>Table Selection Recall</strong></td>
+<td>% of required tables correctly identified by Schema Agent</td>
+<td>≥ 92%</td>
+<td>Compare selected tables against ground truth</td>
+</tr>
+<tr>
+<td><strong>Table Selection Precision</strong></td>
+<td>% of selected tables that are actually needed</td>
+<td>≥ 85%</td>
+<td>Unnecessary tables increase prompt noise</td>
+</tr>
+<tr>
+<td><strong>Column Selection Accuracy</strong></td>
+<td>% of required columns correctly identified</td>
+<td>≥ 90%</td>
+<td>Compare selected columns against ground truth</td>
+</tr>
+<tr>
+<td><strong>Join Accuracy</strong></td>
+<td>% of queries with correct JOIN conditions</td>
+<td>≥ 95%</td>
+<td>AST-level comparison of JOIN clauses</td>
+</tr>
+<tr>
+<td><strong>Semantic Equivalence</strong></td>
+<td>% of queries where generated SQL is logically equivalent to gold SQL (even if syntactically different)</td>
+<td>≥ 88%</td>
+<td>Execute both, compare result sets</td>
+</tr>
+<tr>
+<td><strong>Intent Classification Accuracy</strong></td>
+<td>% of queries where intent is correctly parsed</td>
+<td>≥ 93%</td>
+<td>Compare against labeled intent dataset</td>
+</tr>
+<tr>
+<td><strong>Clarification Rate</strong></td>
+<td>% of queries that require human clarification</td>
+<td>≤ 15%</td>
+<td>Lower is better, but 0% means under-detection of ambiguity</td>
+</tr>
+<tr>
+<td><strong>End-to-End Latency (p95)</strong></td>
+<td>95th percentile total latency excluding query execution</td>
+<td>≤ 4s</td>
+<td>Measured in production</td>
+</tr>
+<tr>
+<td><strong>User Satisfaction</strong></td>
+<td>% of queries receiving positive feedback (thumbs up)</td>
+<td>≥ 75%</td>
+<td>Collected from production feedback</td>
+</tr>
+</tbody></table>
+<h3>Golden Query Dataset</h3>
+<p>The foundation of evaluation is a <strong>curated dataset of NL→SQL pairs</strong> with verified correct results.</p>
+<pre><code class="language-python">@dataclass
+class GoldenQuery:
+    id: str
+    workspace: str                    # Which workspace this belongs to
+    natural_language: str             # The user&#39;s question
+    gold_sql: str                     # Verified correct SQL
+    gold_tables: list[str]            # Tables that should be selected
+    gold_columns: list[str]           # Columns that should be selected
+    expected_intent: dict             # Expected intent parse result
+    complexity: str                   # simple | medium | complex
+    category: str                     # ranking | aggregation | trend | comparison | lookup
+    requires_joins: bool
+    requires_window_functions: bool
+    gold_result_hash: str             # Hash of correct result set for fast comparison
+    created_by: str                   # Who created this test case
+    last_verified: datetime           # When the gold SQL was last verified against live data
+</code></pre>
+<p><strong>Dataset composition:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Count per Workspace</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Simple queries (single table, direct aggregation)</td>
+<td>40-50</td>
+<td>Cover common patterns</td>
+</tr>
+<tr>
+<td>Medium queries (2-3 tables, JOINs, filters)</td>
+<td>30-40</td>
+<td>Most common production queries</td>
+</tr>
+<tr>
+<td>Complex queries (4+ tables, CTEs, window functions)</td>
+<td>15-20</td>
+<td>Edge cases and stress tests</td>
+</tr>
+<tr>
+<td>Ambiguous queries (should trigger clarification)</td>
+<td>10-15</td>
+<td>Verify the system asks for help when it should</td>
+</tr>
+<tr>
+<td>Out-of-scope queries (unanswerable)</td>
+<td>5-10</td>
+<td>Verify graceful &quot;can&#39;t answer&quot; responses</td>
+</tr>
+<tr>
+<td><strong>Total per workspace</strong></td>
+<td><strong>100-135</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>System-wide (10 workspaces)</strong></td>
+<td><strong>1000-1350</strong></td>
+<td></td>
+</tr>
+</tbody></table>
+<p><strong>Golden dataset maintenance:</strong></p>
+<ul>
+<li>New entries sourced from production queries with positive feedback (auto-suggested, manually verified)</li>
+<li>Low-scoring production queries reviewed weekly; correct SQL added as new golden entries</li>
+<li>Schema changes trigger re-verification of affected golden queries</li>
+<li>Dataset version-controlled alongside prompts in Git</li>
+</ul>
+<h3>Automated Evaluation Pipeline</h3>
+<pre><code class="language-mermaid">graph LR
+    TRIGGER[&quot;Trigger:&lt;br/&gt;PR / Nightly / Schema Change&quot;] --&gt; EVAL[Load Golden Dataset]
+    EVAL --&gt; RUN[Run NL-to-SQL Pipeline]
+    RUN --&gt; COMPARE[Compare: Table Selection,&lt;br/&gt;SQL Accuracy, Intent, Latency]
+    COMPARE --&gt; GATE{Quality Gate}
+    GATE --&gt;|Pass| APPROVE[Approve]
+    GATE --&gt;|Fail| BLOCK[Block + Notify]
+</code></pre>
+<p><strong>Quality gates for deployment:</strong></p>
+<pre><code class="language-python">QUALITY_GATES = {
+    &quot;execution_accuracy&quot;: {&quot;min&quot;: 0.83, &quot;regression_threshold&quot;: 0.02},  # Must be ≥83%, can&#39;t drop &gt;2%
+    &quot;table_selection_recall&quot;: {&quot;min&quot;: 0.90, &quot;regression_threshold&quot;: 0.03},
+    &quot;intent_accuracy&quot;: {&quot;min&quot;: 0.91, &quot;regression_threshold&quot;: 0.02},
+    &quot;p95_latency_ms&quot;: {&quot;max&quot;: 4000},  # Excluding SQL execution time
+}
+
+def evaluate_quality_gate(current: dict, baseline: dict) -&gt; tuple[bool, list[str]]:
+    &quot;&quot;&quot;Returns (passed, list of failure reasons).&quot;&quot;&quot;
+    failures = []
+    for metric, thresholds in QUALITY_GATES.items():
+        if &quot;min&quot; in thresholds and current[metric] &lt; thresholds[&quot;min&quot;]:
+            failures.append(f&quot;{metric}: {current[metric]:.2f} below minimum {thresholds[&#39;min&#39;]}&quot;)
+        if &quot;max&quot; in thresholds and current[metric] &gt; thresholds[&quot;max&quot;]:
+            failures.append(f&quot;{metric}: {current[metric]} exceeds maximum {thresholds[&#39;max&#39;]}&quot;)
+        if &quot;regression_threshold&quot; in thresholds:
+            regression = baseline[metric] - current[metric]
+            if regression &gt; thresholds[&quot;regression_threshold&quot;]:
+                failures.append(f&quot;{metric}: regressed by {regression:.2f} (threshold: {thresholds[&#39;regression_threshold&#39;]})&quot;)
+    return (len(failures) == 0, failures)
+</code></pre>
+<h3>A/B Testing Framework</h3>
+<p>When changing prompts, models, or retrieval strategies, run A/B tests to measure real-world impact:</p>
+<pre><code class="language-python">class ABTestConfig:
+    experiment_name: str          # e.g., &quot;sonnet-4-vs-sonnet-4.5-sql-gen&quot;
+    control_variant: str          # Current production configuration
+    treatment_variant: str        # Proposed change
+    traffic_split: float          # 0.1 = 10% traffic to treatment
+    min_sample_size: int          # Minimum queries before concluding (e.g., 500)
+    primary_metric: str           # &quot;execution_accuracy&quot;
+    guardrail_metrics: list[str]  # [&quot;p95_latency_ms&quot;, &quot;cost_per_query&quot;]
+    duration_days: int            # Maximum test duration
+</code></pre>
+<p><strong>A/B test assignment:</strong> Deterministic based on <code>hash(user_id + experiment_name)</code> — ensures a user always sees the same variant within a test, while distributing evenly across users.</p>
+<p><strong>Metrics tracked per variant:</strong></p>
+<ul>
+<li>Execution accuracy (from user feedback + automated checks)</li>
+<li>User satisfaction (thumbs up rate)</li>
+<li>Latency (p50, p95)</li>
+<li>Cost per query (LLM tokens + warehouse compute)</li>
+<li>Clarification rate</li>
+<li>Self-correction rate (how often Validator rejects SQL)</li>
+</ul>
+<h3>Component-Level Testing</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Test Type</th>
+<th>What&#39;s Tested</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Intent Agent</td>
+<td>Unit tests</td>
+<td>Intent parsing on labeled dataset; ambiguity detection precision/recall</td>
+</tr>
+<tr>
+<td>Schema Agent</td>
+<td>Integration tests</td>
+<td>Table selection recall/precision against golden set; RBAC filtering correctness</td>
+</tr>
+<tr>
+<td>SQL Generator</td>
+<td>Unit + integration</td>
+<td>SQL execution accuracy; dialect correctness; few-shot example impact</td>
+</tr>
+<tr>
+<td>Validator</td>
+<td>Unit tests</td>
+<td>True positive rate (catches bad SQL); false positive rate (doesn&#39;t reject good SQL)</td>
+</tr>
+<tr>
+<td>Business Glossary</td>
+<td>Coverage tests</td>
+<td>% of production queries where glossary provided a mapping; unmapped terms alert</td>
+</tr>
+<tr>
+<td>Retrieval Pipeline</td>
+<td>Benchmark tests</td>
+<td>Recall@10, Recall@20 for table retrieval; latency per strategy</td>
+</tr>
+<tr>
+<td>End-to-End</td>
+<td>Integration tests</td>
+<td>Full pipeline execution accuracy on golden dataset</td>
+</tr>
+</tbody></table>
+<h3>Continuous Improvement Flywheel</h3>
+<pre><code class="language-mermaid">graph LR
+    PROD[Production] --&gt; FEEDBACK[User Feedback]
+    FEEDBACK --&gt;|Positive| GOLDEN[Add to Golden Dataset]
+    FEEDBACK --&gt;|Negative| FIX[Fix: Glossary / Metadata / Prompt]
+    FIX --&gt; EVAL[Run Eval Pipeline]
+    EVAL --&gt;|Pass| PROD
+</code></pre>
+<p>This creates a <strong>virtuous cycle</strong>: production usage generates feedback → feedback improves the system → improved system generates better results → users provide more positive feedback.</p>
+<h3>Prompt Regression Testing</h3>
+<p>Prompts are treated as code — version-controlled, reviewed, and tested:</p>
+<pre><code>prompts/
+├── intent_agent/
+│   ├── v1.0.txt          # Original prompt
+│   ├── v1.1.txt          # Added time range handling
+│   └── changelog.md      # What changed and why
+├── sql_generator/
+│   ├── snowflake_v2.0.txt
+│   ├── bigquery_v2.0.txt
+│   └── changelog.md
+└── evaluation/
+    ├── golden_queries.json
+    └── baseline_metrics.json  # Metrics from current production prompts
+</code></pre>
+<p><strong>Every prompt change triggers:</strong></p>
+<ol>
+<li>Full golden dataset evaluation</li>
+<li>Comparison against baseline metrics</li>
+<li>Quality gate check</li>
+<li>If passed: merge and deploy</li>
+<li>If failed: block merge, notify author with specific regressions</li>
+</ol>
+<hr>
+<h2>14. Architecture Decisions</h2>
+<h3>Decision 1: Separate Agents vs. Single Monolithic Prompt</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Chosen</strong></td>
+<td>6 specialized agents in a LangGraph pipeline</td>
+</tr>
+<tr>
+<td><strong>Alternative</strong></td>
+<td>Single LLM call with all schema context and instructions</td>
+</tr>
+<tr>
+<td><strong>Why chosen</strong></td>
+<td>(1) 1000+ tables cannot fit in a single prompt. (2) Each agent has a focused objective, reducing error rate. (3) Validation is decoupled from generation, creating a security boundary. (4) Agents can use different models (cheaper for simple tasks). (5) Failures are isolated and recoverable.</td>
+</tr>
+<tr>
+<td><strong>Trade-off</strong></td>
+<td>Higher total latency (multiple LLM calls) and complexity. Mitigated by parallel tool calls within agents and semantic caching.</td>
+</tr>
+<tr>
+<td><strong>Limitation</strong></td>
+<td>More infrastructure to manage; requires careful state passing between agents.</td>
+</tr>
+</tbody></table>
+<h3>Decision 2: LangGraph vs. Alternatives</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Chosen</strong></td>
+<td>LangGraph for agentic orchestration</td>
+</tr>
+<tr>
+<td><strong>Alternatives</strong></td>
+<td>CrewAI, AutoGen, Temporal + custom agents, plain Python async</td>
+</tr>
+<tr>
+<td><strong>Why chosen</strong></td>
+<td>(1) First-class conditional routing and cycles (needed for retry loops). (2) Built-in checkpointing for human-in-the-loop and crash recovery. (3) LangSmith integration for observability. (4) Production deployment support via LangGraph Platform. (5) Active community and Anthropic/OpenAI model support.</td>
+</tr>
+<tr>
+<td><strong>Trade-off</strong></td>
+<td>Vendor coupling to LangChain ecosystem. Mitigated by keeping agent logic in pure Python functions that are framework-agnostic.</td>
+</tr>
+<tr>
+<td><strong>Limitation</strong></td>
+<td>Learning curve; debugging can be opaque without LangSmith.</td>
+</tr>
+</tbody></table>
+<h3>Decision 3: pgvector vs. Dedicated Vector Database</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Chosen</strong></td>
+<td>pgvector (PostgreSQL extension) for vector storage, with migration path to Pinecone</td>
+</tr>
+<tr>
+<td><strong>Alternatives</strong></td>
+<td>Pinecone, Weaviate, Qdrant, Milvus, Chroma</td>
+</tr>
+<tr>
+<td><strong>Why chosen</strong></td>
+<td>(1) Simplifies infrastructure — metadata and vectors in one database. (2) At 50K embeddings, pgvector with HNSW delivers sub-millisecond search. (3) Transactional consistency between metadata and embeddings. (4) No additional vendor dependency.</td>
+</tr>
+<tr>
+<td><strong>Trade-off</strong></td>
+<td>Doesn&#39;t scale to millions of embeddings as well as dedicated vector DBs.</td>
+</tr>
+<tr>
+<td><strong>Migration trigger</strong></td>
+<td>Move to Pinecone when embedding count exceeds 500K or when multi-region replication is needed.</td>
+</tr>
+</tbody></table>
+<h3>Decision 4: Hybrid Retrieval vs. Pure Semantic Search</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Chosen</strong></td>
+<td>Hybrid retrieval (semantic + keyword + glossary + history) with reranking</td>
+</tr>
+<tr>
+<td><strong>Alternative</strong></td>
+<td>Pure semantic (vector) search</td>
+</tr>
+<tr>
+<td><strong>Why chosen</strong></td>
+<td>(1) Semantic search misses exact keyword matches (table <code>dim_customers</code> for query &quot;customers&quot;). (2) Business glossary provides the highest-precision mappings for domain terms. (3) Query history provides proven NL→table mappings. (4) Reranking combines signals from all strategies for optimal recall+precision.</td>
+</tr>
+<tr>
+<td><strong>Trade-off</strong></td>
+<td>More complex retrieval pipeline; slightly higher latency (~100ms overhead).</td>
+</tr>
+<tr>
+<td><strong>Benefit</strong></td>
+<td>Significantly higher table selection accuracy (estimated 90%+ vs. ~70% for pure semantic).</td>
+</tr>
+</tbody></table>
+<h3>Decision 5: Read-Only Proxy vs. Application-Level SQL Filtering</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Chosen</strong></td>
+<td>Defense-in-depth: application-level SQL AST validation + infrastructure-level read-only proxy + database-level read-only role</td>
+</tr>
+<tr>
+<td><strong>Alternative</strong></td>
+<td>Application-level regex filtering only</td>
+</tr>
+<tr>
+<td><strong>Why chosen</strong></td>
+<td>(1) No single layer is sufficient — LLMs can generate creative SQL that bypasses regex. (2) AST parsing catches structural issues. (3) Read-only proxy prevents bypass even if the application is compromised. (4) Database role is the last line of defense.</td>
+</tr>
+<tr>
+<td><strong>Trade-off</strong></td>
+<td>Three layers of enforcement adds complexity.</td>
+</tr>
+<tr>
+<td><strong>Benefit</strong></td>
+<td>Near-zero risk of accidental data mutation. Required for enterprise compliance.</td>
+</tr>
+</tbody></table>
+<h3>Decision 6: Semantic Cache</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Chosen</strong></td>
+<td>Embedding-based semantic cache (cosine similarity &gt; 0.95 = cache hit)</td>
+</tr>
+<tr>
+<td><strong>Alternative</strong></td>
+<td>Exact string match cache only</td>
+</tr>
+<tr>
+<td><strong>Why chosen</strong></td>
+<td>Users frequently ask the same question with different phrasing (&quot;top customers by revenue&quot; vs &quot;highest revenue customers&quot;). Semantic cache catches these variations.</td>
+</tr>
+<tr>
+<td><strong>Trade-off</strong></td>
+<td>Risk of false-positive cache hits if threshold is too low. 0.95 cosine threshold is conservative.</td>
+</tr>
+<tr>
+<td><strong>Benefit</strong></td>
+<td>15-25% cache hit rate; reduces LLM costs and latency for repeat patterns.</td>
+</tr>
+</tbody></table>
+<h3>Decision 7: Business Glossary as a First-Class Component</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Chosen</strong></td>
+<td>Curated business glossary with authoritative term→column mappings</td>
+</tr>
+<tr>
+<td><strong>Alternative</strong></td>
+<td>Rely entirely on LLM to infer column meanings from names and descriptions</td>
+</tr>
+<tr>
+<td><strong>Why chosen</strong></td>
+<td>Enterprise schemas are ambiguous. &quot;Revenue&quot; might map to <code>gross_revenue</code>, <code>net_revenue</code>, <code>recognized_revenue</code>, or <code>arr</code>. Without a glossary, the LLM guesses — and guessing is unacceptable for financial reporting queries. Industry experience consistently shows this as the #1 accuracy lever.</td>
+</tr>
+<tr>
+<td><strong>Trade-off</strong></td>
+<td>Requires manual curation and ongoing maintenance.</td>
+</tr>
+<tr>
+<td><strong>Benefit</strong></td>
+<td>Eliminates the #1 source of semantic errors in Text-to-SQL systems.</td>
+</tr>
+</tbody></table>
+<h3>Decision 8: Multiple LLM Models by Task</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Chosen</strong></td>
+<td>Route different tasks to different model tiers (Opus for complex SQL, Haiku for classification)</td>
+</tr>
+<tr>
+<td><strong>Alternative</strong></td>
+<td>Use a single model for all tasks</td>
+</tr>
+<tr>
+<td><strong>Why chosen</strong></td>
+<td>(1) Intent classification and formatting don&#39;t need the most expensive model. (2) Cost reduction of 5-10x on ~60% of LLM calls. (3) Smaller models are faster, reducing latency for simple tasks.</td>
+</tr>
+<tr>
+<td><strong>Trade-off</strong></td>
+<td>Must maintain prompt compatibility across models; occasional quality differences.</td>
+</tr>
+<tr>
+<td><strong>Benefit</strong></td>
+<td>Estimated 60-70% reduction in LLM costs with negligible quality impact.</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Appendix A: Technology Stack Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>API Gateway</td>
+<td>Kong / AWS API Gateway</td>
+<td>Mature, supports rate limiting, auth plugins</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>Okta / Auth0 (OIDC)</td>
+<td>Enterprise SSO integration</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>FastAPI (Python)</td>
+<td>Async, fast, excellent LangChain/LangGraph ecosystem</td>
+</tr>
+<tr>
+<td>Agent Orchestration</td>
+<td>LangGraph</td>
+<td>See Decision 2</td>
+</tr>
+<tr>
+<td>LLM Primary</td>
+<td>Claude Sonnet 4.6</td>
+<td>Best cost/quality for SQL generation</td>
+</tr>
+<tr>
+<td>LLM Complex</td>
+<td>Claude Opus 4.6</td>
+<td>Complex multi-table reasoning</td>
+</tr>
+<tr>
+<td>LLM Fast</td>
+<td>Claude Haiku 4.5</td>
+<td>Classification, formatting</td>
+</tr>
+<tr>
+<td>Embedding</td>
+<td>OpenAI text-embedding-3-large</td>
+<td>High quality, 3072-dim</td>
+</tr>
+<tr>
+<td>Vector Store</td>
+<td>pgvector (PostgreSQL)</td>
+<td>See Decision 3</td>
+</tr>
+<tr>
+<td>Metadata Store</td>
+<td>PostgreSQL 16</td>
+<td>Relational schema + pgvector in one DB</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td>Redis Cluster</td>
+<td>Semantic + result + metadata cache</td>
+</tr>
+<tr>
+<td>Message Queue</td>
+<td>Kafka / SQS</td>
+<td>Async audit logging, schema sync triggers</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>OpenTelemetry + Grafana + LangSmith</td>
+<td>Full stack coverage</td>
+</tr>
+<tr>
+<td>Audit Log</td>
+<td>PostgreSQL (append-only) + S3 archive</td>
+<td>Compliance</td>
+</tr>
+<tr>
+<td>Deployment</td>
+<td>Kubernetes (EKS/GKE)</td>
+<td>Horizontal scaling, health checks</td>
+</tr>
+</tbody></table>
+<h2>Appendix B: Deployment Architecture</h2>
+<pre><code>Kubernetes Cluster:
+  ┌─────────────────────────────────────────────────────────────┐
+  │  Ingress (Nginx, TLS)                                       │
+  │      └──&gt; Orchestration Service (3-10 replicas, HPA)        │
+  │               ├──&gt; LangGraph Workers (5-20 replicas, HPA)   │
+  │               ├──&gt; PostgreSQL (Primary + 2 Replicas, pgvector)│
+  │               └──&gt; Redis Cluster (3 nodes)                  │
+  └─────────────────────────────────────────────────────────────┘
+         │              │              │
+         ▼              ▼              ▼
+  Identity Provider  LLM APIs      Data Warehouses    Grafana Cloud
+  (Okta/Auth0)       (Anthropic)   (Snowflake, etc.)  (Monitoring)
+</code></pre>
+<h2>Appendix C: Cost Estimate (Illustrative)</h2>
+<p>For an enterprise with 2000 tables, 500 daily active users, ~5000 queries/day:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Monthly Cost (est.)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LLM API (mixed models, with caching)</td>
+<td>$3,000 - $8,000</td>
+</tr>
+<tr>
+<td>Kubernetes cluster (3-10 nodes)</td>
+<td>$2,000 - $5,000</td>
+</tr>
+<tr>
+<td>PostgreSQL (RDS/Cloud SQL)</td>
+<td>$500 - $1,500</td>
+</tr>
+<tr>
+<td>Redis Cluster</td>
+<td>$300 - $800</td>
+</tr>
+<tr>
+<td>Observability (Grafana Cloud)</td>
+<td>$500 - $1,500</td>
+</tr>
+<tr>
+<td>Warehouse compute (incremental)</td>
+<td>$1,000 - $5,000</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>$7,300 - $21,800</strong></td>
+</tr>
+</tbody></table>
+<p>This is significantly cheaper than the engineering hours saved. Industry benchmarks from large-scale Text-to-SQL deployments report 60-70% reductions in query authoring time. Even at conservative estimates, a Text-to-SQL platform pays for itself many times over.</p>
+    </div>
+
+    <!-- PrismJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+
+    <!-- MermaidJS & Setup Scripts -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        
+        // 1. Transform mermaid code blocks
+        document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+            const pre = code.parentElement;
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.textContent = code.textContent;
+            pre.replaceWith(div);
+        });
+
+        // 2. Add ToC class
+        const firstOl = document.querySelector('ol');
+        if (firstOl) firstOl.className = 'toc';
+
+        // 3. Ensure IDs for anchors
+        document.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(h => {
+            if (!h.id) {
+                h.id = h.innerText.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            }
+        });
+
+        // 4. Init Mermaid
+        mermaid.initialize({ 
+            startOnLoad: false, 
+            theme: 'dark',
+            fontFamily: 'Inter',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#f8fafc',
+                primaryBorderColor: '#3b82f6',
+                lineColor: '#94a3b8',
+                secondaryColor: '#0f172a',
+                tertiaryColor: '#1e293b'
+            }
+        });
+        await mermaid.run({ querySelector: '.mermaid' });
+    </script>
+</body>
+</html>
