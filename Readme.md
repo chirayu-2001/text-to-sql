@@ -742,132 +742,32 @@ Asynchronously (via message queue):
 
 The metadata store is the foundation of the system. It stores structured information about every table and column in the warehouse.
 
-```mermaid
-erDiagram
-    DATA_SOURCE ||--o{ SCHEMA_NAMESPACE : contains
-    SCHEMA_NAMESPACE ||--o{ TABLE_META : contains
-    TABLE_META ||--o{ COLUMN_META : has
-    TABLE_META ||--o{ TABLE_RELATIONSHIP : "fk_from"
-    TABLE_META ||--o{ TABLE_RELATIONSHIP : "fk_to"
-    TABLE_META ||--o{ TABLE_STATS : has
-    COLUMN_META ||--o{ COLUMN_STATS : has
-    BUSINESS_TERM ||--o{ TERM_MAPPING : defines
-    TERM_MAPPING }o--|| COLUMN_META : "maps_to"
-    QUERY_HISTORY ||--o{ QUERY_FEEDBACK : has
+**Entity Relationships:**
 
-    DATA_SOURCE {
-        uuid id PK
-        string name
-        string type "snowflake|bigquery|redshift"
-        string connection_config_ref
-        timestamp last_synced
-    }
-
-    SCHEMA_NAMESPACE {
-        uuid id PK
-        uuid data_source_id FK
-        string database_name
-        string schema_name
-        string domain "sales|marketing|finance"
-    }
-
-    TABLE_META {
-        uuid id PK
-        uuid schema_namespace_id FK
-        string table_name
-        string description
-        string business_description
-        string owner_team
-        string update_frequency "daily|hourly|realtime"
-        bigint row_count_approx
-        timestamp last_updated
-        boolean is_active
-        string tags "[]"
-        vector description_embedding
-    }
-
-    COLUMN_META {
-        uuid id PK
-        uuid table_id FK
-        string column_name
-        string data_type
-        string description
-        string business_description
-        boolean is_primary_key
-        boolean is_nullable
-        boolean is_pii
-        boolean is_sensitive
-        string masking_policy
-        string sample_values "[]"
-        vector description_embedding
-    }
-
-    TABLE_RELATIONSHIP {
-        uuid id PK
-        uuid from_table_id FK
-        uuid to_table_id FK
-        string from_column
-        string to_column
-        string relationship_type "fk|inferred|manual"
-        float confidence
-    }
-
-    TABLE_STATS {
-        uuid id PK
-        uuid table_id FK
-        bigint row_count
-        bigint size_bytes
-        timestamp stats_collected_at
-        jsonb partition_info
-    }
-
-    COLUMN_STATS {
-        uuid id PK
-        uuid column_id FK
-        bigint distinct_count
-        float null_percentage
-        string min_value
-        string max_value
-        jsonb value_distribution
-        timestamp stats_collected_at
-    }
-
-    BUSINESS_TERM {
-        uuid id PK
-        string term
-        string definition
-        string domain
-        string synonyms "[]"
-        vector term_embedding
-    }
-
-    TERM_MAPPING {
-        uuid id PK
-        uuid term_id FK
-        uuid column_id FK
-        string mapping_type "exact|derived|computed"
-        string sql_expression
-    }
-
-    QUERY_HISTORY {
-        uuid id PK
-        string natural_language_query
-        string generated_sql
-        boolean was_successful
-        float feedback_score
-        string user_department
-        timestamp created_at
-        vector query_embedding
-    }
-
-    QUERY_FEEDBACK {
-        uuid id PK
-        uuid query_id FK
-        string feedback_type "thumbs_up|thumbs_down|correction"
-        string corrected_sql
-        string comment
-    }
 ```
+DATA_SOURCE 1──* SCHEMA_NAMESPACE 1──* TABLE_META 1──* COLUMN_META
+                                      TABLE_META 1──* TABLE_RELATIONSHIP
+                                      TABLE_META 1──* TABLE_STATS
+                                      COLUMN_META 1──* COLUMN_STATS
+BUSINESS_TERM 1──* TERM_MAPPING *──1 COLUMN_META
+QUERY_HISTORY 1──* QUERY_FEEDBACK
+```
+
+**Key Tables:**
+
+| Table | Key Columns |
+|-------|-------------|
+| `DATA_SOURCE` | id, name, type (snowflake\|bigquery\|redshift), connection_config_ref, last_synced |
+| `SCHEMA_NAMESPACE` | id, data_source_id (FK), database_name, schema_name, domain |
+| `TABLE_META` | id, schema_namespace_id (FK), table_name, description, business_description, owner_team, update_frequency, row_count_approx, is_active, description_embedding (vector) |
+| `COLUMN_META` | id, table_id (FK), column_name, data_type, description, business_description, is_primary_key, is_pii, is_sensitive, masking_policy, sample_values, description_embedding (vector) |
+| `TABLE_RELATIONSHIP` | id, from_table_id (FK), to_table_id (FK), from_column, to_column, relationship_type (fk\|inferred\|manual), confidence |
+| `TABLE_STATS` | id, table_id (FK), row_count, size_bytes, stats_collected_at, partition_info (jsonb) |
+| `COLUMN_STATS` | id, column_id (FK), distinct_count, null_percentage, min_value, max_value, value_distribution (jsonb) |
+| `BUSINESS_TERM` | id, term, definition, domain, synonyms, term_embedding (vector) |
+| `TERM_MAPPING` | id, term_id (FK), column_id (FK), mapping_type (exact\|derived\|computed), sql_expression |
+| `QUERY_HISTORY` | id, natural_language_query, generated_sql, was_successful, feedback_score, user_department, query_embedding (vector) |
+| `QUERY_FEEDBACK` | id, query_id (FK), feedback_type (thumbs_up\|thumbs_down\|correction), corrected_sql, comment |
 
 ### Business Glossary
 
@@ -911,18 +811,15 @@ At 1000 tables with an average of 15 columns, the column index has ~15,000 entri
 
 ### Metadata Synchronization
 
-```mermaid
-graph LR
-    subgraph "Schema Sync Pipeline"
-        CRON[Cron Trigger<br/>Every 6 hours] --> CRAWLER[Schema Crawler]
-        WEBHOOK[Warehouse Webhook<br/>On DDL Change] --> CRAWLER
-        CRAWLER --> DIFF[Schema Differ]
-        DIFF --> |New/Changed Tables| META_UPDATE[Metadata Updater]
-        DIFF --> |Dropped Tables| DEACTIVATE[Table Deactivator]
-        META_UPDATE --> EMBED[Re-embed Changed Items]
-        EMBED --> VECTOR_UPDATE[Update Vector Index]
-        META_UPDATE --> NOTIFY[Notify Data Stewards<br/>for Description Review]
-    end
+```
+Schema Sync Pipeline:
+
+  Cron (every 6h) / Warehouse Webhook (on DDL change)
+      └──> Schema Crawler
+              └──> Schema Differ
+                      ├── New/Changed Tables ──> Metadata Updater ──> Re-embed ──> Update Vector Index
+                      │                                           └──> Notify Data Stewards
+                      └── Dropped Tables ──> Table Deactivator
 ```
 
 **Sync process:**
@@ -956,29 +853,33 @@ The SQL Generator never sees more than ~2000 tokens of schema context. This is t
 
 ### Multi-Strategy Retrieval Pipeline
 
-```mermaid
-graph TB
-    Q[User Query + Intent] --> PAR{Parallel Retrieval}
+```
+Multi-Strategy Retrieval Pipeline:
 
-    PAR --> SEM[Semantic Search<br/>Vector similarity on<br/>table/column embeddings]
-    PAR --> KW[Keyword Search<br/>BM25 on table names,<br/>column names, descriptions]
-    PAR --> GLOSS[Business Glossary<br/>Exact + fuzzy match<br/>on business terms]
-    PAR --> HIST[Query History<br/>Similar past queries<br/>→ tables they used]
-
-    SEM --> MERGE[Merge & Deduplicate<br/>Union of all candidates]
-    KW --> MERGE
-    GLOSS --> MERGE
-    HIST --> MERGE
-
-    MERGE --> RERANK[Reranker<br/>Cross-encoder or<br/>LLM-based scoring]
-
-    RERANK --> FK[FK Graph Traversal<br/>Add join tables if<br/>selected tables need bridging]
-
-    FK --> RBAC[RBAC Filter<br/>Remove tables user<br/>cannot access]
-
-    RBAC --> COL[Column Pruning<br/>Select only columns<br/>relevant to the query]
-
-    COL --> OUTPUT[Final Schema Context<br/>3-15 tables, 30-80 columns]
+  User Query + Intent
+      │
+      ├──> Semantic Search (vector similarity on table/column embeddings)
+      ├──> Keyword Search (BM25 on table names, column names, descriptions)
+      ├──> Business Glossary (exact + fuzzy match on business terms)
+      └──> Query History (similar past queries → tables they used)
+            │
+            ▼
+      Merge & Deduplicate (union of all candidates)
+            │
+            ▼
+      Reranker (cross-encoder or LLM-based scoring)
+            │
+            ▼
+      FK Graph Traversal (add join tables if selected tables need bridging)
+            │
+            ▼
+      RBAC Filter (remove tables user cannot access)
+            │
+            ▼
+      Column Pruning (select only relevant columns)
+            │
+            ▼
+      Final Schema Context: 3-15 tables, 30-80 columns
 ```
 
 ### Strategy Details
@@ -1252,19 +1153,16 @@ LIMIT 10
 
 ### SQL Refinement & Self-Correction Loop
 
-```mermaid
-graph TD
-    GEN[SQL Generator] --> VAL{Validator}
-    VAL -->|Valid| EXEC[Execute]
-    VAL -->|Invalid| FB[Format Error Feedback]
-    FB --> GEN2[SQL Generator<br/>Retry with errors]
-    GEN2 --> VAL2{Validator}
-    VAL2 -->|Valid| EXEC
-    VAL2 -->|Invalid| FB2[Format Error Feedback]
-    FB2 --> GEN3[SQL Generator<br/>Retry with error history]
-    GEN3 --> VAL3{Validator}
-    VAL3 -->|Valid| EXEC
-    VAL3 -->|Invalid| FAIL[Return error to user]
+```
+SQL Self-Correction Loop:
+
+  SQL Generator ──> Validator ──┬──> [Valid] ──> Execute
+                                └──> [Invalid] ──> Error Feedback ──> SQL Generator (retry)
+                                                                        └──> Validator ──┬──> [Valid] ──> Execute
+                                                                                         └──> [Invalid] ──> Error Feedback ──> SQL Generator (retry 2)
+                                                                                                                                └──> Validator ──┬──> [Valid] ──> Execute
+                                                                                                                                                 └──> [Invalid] ──> Return error to user
+  Maximum 3 attempts before escalating.
 ```
 
 Error feedback is specific and actionable:
@@ -1520,14 +1418,17 @@ Stored in an append-only table (or shipped to a SIEM like Splunk) for compliance
 
 #### Ambiguous Question Flow
 
-```mermaid
-graph TD
-    Q["Show me the revenue"] --> INTENT[Intent Agent]
-    INTENT --> AMB{Ambiguous?}
-    AMB -->|"revenue" maps to 3 columns| CLARIFY["Which revenue metric?<br/>1. Gross Revenue (before refunds)<br/>2. Net Revenue (after refunds)<br/>3. Recognized Revenue (accounting)"]
-    CLARIFY --> USER_RESPONSE["User: Net Revenue"]
-    USER_RESPONSE --> INTENT2[Intent Agent<br/>Re-enters with clarification]
-    INTENT2 --> PROCEED[Continue pipeline]
+```
+Ambiguous Question Flow:
+
+  User: "Show me the revenue"
+      └──> Intent Agent detects: "revenue" maps to 3 columns
+              └──> Clarification: "Which revenue metric?
+                    1. Gross Revenue (before refunds)
+                    2. Net Revenue (after refunds)
+                    3. Recognized Revenue (accounting)"
+                        └──> User: "Net Revenue"
+                              └──> Intent Agent re-enters with clarification ──> Continue pipeline
 ```
 
 #### Self-Correction Loop
@@ -1562,25 +1463,14 @@ If the vector store is temporarily unavailable:
 
 ### Scaling Dimensions
 
-```mermaid
-graph TB
-    subgraph "Horizontal Scaling"
-        API[API Gateway<br/>Auto-scaling group]
-        ORCH[Orchestration Service<br/>Stateless, N replicas]
-        LG_W[LangGraph Workers<br/>Celery/K8s Jobs]
-    end
+```
+Scaling Dimensions:
 
-    subgraph "Data Scaling"
-        META[Metadata Store<br/>PostgreSQL with read replicas]
-        VS[Vector Store<br/>Sharded by domain]
-        CACHE[Redis Cluster<br/>Semantic + result cache]
-    end
-
-    subgraph "Multi-Warehouse"
-        DW1[Snowflake<br/>Sales Domain]
-        DW2[BigQuery<br/>Marketing Domain]
-        DW3[Redshift<br/>Finance Domain]
-    end
+  Horizontal Scaling             Data Scaling                  Multi-Warehouse
+  ────────────────────           ─────────────────             ────────────────────
+  API Gateway (auto-scale)       Metadata Store (PG replicas)  Snowflake (Sales)
+  Orchestration (stateless)      Vector Store (sharded)        BigQuery (Marketing)
+  LangGraph Workers (K8s)        Redis Cluster (cache)         Redshift (Finance)
 ```
 
 ### Thousands of Tables
@@ -1693,38 +1583,13 @@ Using smaller models for simpler tasks (intent classification, formatting) reduc
 
 ### Observability Stack
 
-```mermaid
-graph TB
-    subgraph "Collection"
-        OTEL[OpenTelemetry SDK<br/>Traces + Metrics]
-        LS[LangSmith<br/>LLM-specific traces]
-        APP_LOG[Structured Logging<br/>JSON to stdout]
-    end
-
-    subgraph "Transport"
-        OTEL_COL[OTel Collector]
-        LOG_SHIP[Fluentd / Vector]
-    end
-
-    subgraph "Storage & Analysis"
-        JAEGER[Jaeger / Tempo<br/>Distributed Traces]
-        PROM[Prometheus<br/>Time-series Metrics]
-        ELK[Elasticsearch<br/>Log Storage]
-    end
-
-    subgraph "Visualization & Alerting"
-        GRAFANA[Grafana<br/>Dashboards]
-        PD[PagerDuty<br/>Alerts]
-    end
-
-    OTEL --> OTEL_COL --> JAEGER
-    OTEL --> OTEL_COL --> PROM
-    APP_LOG --> LOG_SHIP --> ELK
-    LS --> LS
-    JAEGER --> GRAFANA
-    PROM --> GRAFANA
-    ELK --> GRAFANA
-    GRAFANA --> PD
+```
+  Collection                Transport             Storage & Analysis        Visualization
+  ──────────────            ─────────             ──────────────────        ─────────────
+  OpenTelemetry ──────────> OTel Collector ──────> Jaeger (Traces)    ──┐
+  (Traces + Metrics)                         └──> Prometheus (Metrics) ├──> Grafana ──> PagerDuty
+  LangSmith (LLM traces)                                               │
+  Structured Logging ────> Fluentd/Vector ──────> Elasticsearch (Logs)─┘
 ```
 
 ### Key Metrics
@@ -1822,54 +1687,19 @@ This is the single most impactful accuracy lever in the system. Without workspac
 
 ### Workspace Architecture
 
-```mermaid
-erDiagram
-    ORGANIZATION ||--o{ WORKSPACE : contains
-    WORKSPACE ||--o{ WORKSPACE_TABLE : includes
-    WORKSPACE ||--o{ WORKSPACE_EXAMPLE : has
-    WORKSPACE ||--o{ WORKSPACE_GLOSSARY : has
-    WORKSPACE_TABLE }o--|| TABLE_META : references
-    WORKSPACE_GLOSSARY }o--|| BUSINESS_TERM : references
-
-    WORKSPACE {
-        uuid id PK
-        uuid org_id FK
-        string name "e.g. Sales Analytics"
-        string description
-        string domain "sales|marketing|finance|ops"
-        string type "system|custom"
-        string owner_team
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    WORKSPACE_TABLE {
-        uuid id PK
-        uuid workspace_id FK
-        uuid table_id FK
-        string role "primary|supporting|reference"
-        int priority "ranking within workspace"
-    }
-
-    WORKSPACE_EXAMPLE {
-        uuid id PK
-        uuid workspace_id FK
-        string natural_language_query
-        string sql_query
-        string explanation
-        float quality_score
-        boolean is_verified
-        vector query_embedding
-    }
-
-    WORKSPACE_GLOSSARY {
-        uuid id PK
-        uuid workspace_id FK
-        uuid term_id FK
-        string workspace_specific_definition
-    }
 ```
+Relationships:
+  ORGANIZATION 1──* WORKSPACE 1──* WORKSPACE_TABLE *──1 TABLE_META
+                    WORKSPACE 1──* WORKSPACE_EXAMPLE
+                    WORKSPACE 1──* WORKSPACE_GLOSSARY *──1 BUSINESS_TERM
+```
+
+| Table | Key Columns |
+|-------|-------------|
+| `WORKSPACE` | id, org_id (FK), name, description, domain, type (system\|custom), owner_team, is_active |
+| `WORKSPACE_TABLE` | id, workspace_id (FK), table_id (FK), role (primary\|supporting\|reference), priority |
+| `WORKSPACE_EXAMPLE` | id, workspace_id (FK), natural_language_query, sql_query, explanation, quality_score, is_verified, query_embedding (vector) |
+| `WORKSPACE_GLOSSARY` | id, workspace_id (FK), term_id (FK), workspace_specific_definition |
 
 ### Workspace Types
 
@@ -1881,16 +1711,13 @@ erDiagram
 
 ### How Workspaces Integrate with the Agent Pipeline
 
-```mermaid
-graph LR
-    Q[User Query] --> INTENT[Intent Agent]
-    INTENT --> WS_SELECT{Workspace\nSelection}
-    WS_SELECT -->|"Single workspace"| SCHEMA[Schema Agent\nsearches within workspace]
-    WS_SELECT -->|"Multiple workspaces"| SCHEMA_MULTI[Schema Agent\nsearches across workspaces]
-    WS_SELECT -->|"No workspace match"| SCHEMA_GLOBAL[Schema Agent\nglobal search + warning]
-    SCHEMA --> SQL[SQL Generator]
-    SCHEMA_MULTI --> SQL
-    SCHEMA_GLOBAL --> SQL
+```
+Workspace Integration Flow:
+
+  User Query ──> Intent Agent ──> Workspace Selection
+                                      ├──> Single workspace  ──> Schema Agent (scoped search)   ──> SQL Generator
+                                      ├──> Multiple workspaces ──> Schema Agent (cross-workspace) ──> SQL Generator
+                                      └──> No match           ──> Schema Agent (global + warning) ──> SQL Generator
 ```
 
 **Workspace selection logic:**
@@ -2226,40 +2053,19 @@ prompts/
 
 ## Appendix B: Deployment Architecture
 
-```mermaid
-graph TB
-    subgraph "Kubernetes Cluster"
-        subgraph "Ingress"
-            ING[Nginx Ingress<br/>TLS Termination]
-        end
-
-        subgraph "Application Pods"
-            API_POD[Orchestration Service<br/>3-10 replicas<br/>HPA on CPU/RPS]
-            WORKER_POD[LangGraph Workers<br/>5-20 replicas<br/>HPA on queue depth]
-        end
-
-        subgraph "Data Pods"
-            PG[PostgreSQL<br/>Primary + 2 Replicas<br/>pgvector enabled]
-            REDIS[Redis Cluster<br/>3 nodes]
-        end
-    end
-
-    subgraph "External Services"
-        LLM_API[LLM APIs<br/>Anthropic / OpenAI]
-        DW[Data Warehouses]
-        IDP[Identity Provider]
-        MONITOR[Grafana Cloud /<br/>Datadog]
-    end
-
-    ING --> API_POD
-    API_POD --> WORKER_POD
-    API_POD --> PG
-    API_POD --> REDIS
-    WORKER_POD --> PG
-    WORKER_POD --> LLM_API
-    WORKER_POD --> DW
-    API_POD --> IDP
-    API_POD --> MONITOR
+```
+Kubernetes Cluster:
+  ┌─────────────────────────────────────────────────────────────┐
+  │  Ingress (Nginx, TLS)                                       │
+  │      └──> Orchestration Service (3-10 replicas, HPA)        │
+  │               ├──> LangGraph Workers (5-20 replicas, HPA)   │
+  │               ├──> PostgreSQL (Primary + 2 Replicas, pgvector)│
+  │               └──> Redis Cluster (3 nodes)                  │
+  └─────────────────────────────────────────────────────────────┘
+         │              │              │
+         ▼              ▼              ▼
+  Identity Provider  LLM APIs      Data Warehouses    Grafana Cloud
+  (Okta/Auth0)       (Anthropic)   (Snowflake, etc.)  (Monitoring)
 ```
 
 ## Appendix C: Cost Estimate (Illustrative)
