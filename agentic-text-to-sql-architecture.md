@@ -25,149 +25,68 @@
 
 ```mermaid
 graph TB
-    subgraph "Client Layer"
-        UI[Web UI / Chat Interface]
-        API_CLIENT[API Clients / SDKs]
-        SLACK[Slack / Teams Bot]
+    subgraph Clients
+        UI[Web UI]
+        API_CLIENT[API / SDKs]
+        SLACK[Slack / Teams]
     end
 
-    subgraph "API Gateway & Auth"
-        GW[API Gateway<br/>Kong / AWS ALB]
-        AUTH[Auth Service<br/>OAuth2 / OIDC]
-        RL[Rate Limiter<br/>Redis-based]
+    subgraph Gateway
+        GW[API Gateway]
+        AUTH[Auth - OAuth2/OIDC]
     end
 
-    subgraph "Core Backend Services"
-        ORCH[Orchestration Service<br/>FastAPI]
-        CONV[Conversation Manager<br/>Session & History]
-        CACHE_SVC[Cache Service<br/>Redis Cluster]
+    subgraph Backend
+        ORCH[Orchestration - FastAPI]
+        CACHE_SVC[Cache - Redis]
     end
 
-    subgraph "Agentic Workflow Engine"
+    subgraph Agents
         LG[LangGraph Runtime]
-        subgraph "Agent Pipeline"
-            INTENT[Intent Agent]
-            SCHEMA[Schema Agent]
-            SQL_GEN[SQL Generator Agent]
-            VALIDATOR[Validator Agent]
-            EXECUTOR[Executor Agent]
-            FORMATTER[Formatter Agent]
-        end
-        CKPT[Checkpoint Store<br/>PostgreSQL]
+        INTENT[Intent Agent]
+        SCHEMA[Schema Agent]
+        SQL_GEN[SQL Generator]
+        VALIDATOR[Validator]
+        EXECUTOR[Executor]
+        FORMATTER[Formatter]
     end
 
-    subgraph "LLM Layer"
-        LLM_GW[LLM Gateway<br/>Load Balancer + Fallback]
-        LLM1[Claude / GPT-4<br/>Primary]
-        LLM2[Claude / GPT-4<br/>Fallback]
-        LLM3[Smaller Model<br/>Classification Tasks]
+    subgraph LLM
+        LLM_GW[LLM Gateway]
     end
 
-    subgraph "Knowledge & Retrieval Layer"
-        VS[Vector Store<br/>Pinecone / pgvector]
-        META_DB[Metadata Store<br/>PostgreSQL]
-        BG[Business Glossary<br/>PostgreSQL]
-        QH[Query History Store<br/>PostgreSQL]
-        EMB[Embedding Service<br/>Ada / Cohere]
+    subgraph Knowledge
+        VS[Vector Store]
+        META_DB[Metadata Store]
+        BG[Business Glossary]
     end
 
-    subgraph "SQL Execution Layer"
-        PROXY[Query Proxy<br/>Read-Only Enforcer]
-        QG[Query Governor<br/>Cost & Timeout Limits]
-        CONN[Connection Pool<br/>Per-Warehouse]
+    subgraph Execution
+        PROXY[Read-Only Proxy]
+        DW[Data Warehouses]
     end
 
-    subgraph "Data Warehouse(s)"
-        DW1[Snowflake]
-        DW2[BigQuery]
-        DW3[Redshift / Databricks]
+    subgraph Security
+        RBAC_SVC[RBAC/ABAC Engine]
+        GUARD[Guardrails + PII]
     end
 
-    subgraph "Security Layer"
-        RBAC_SVC[RBAC / ABAC Engine]
-        PII[PII Detector<br/>Presidio / Custom]
-        MASK[Data Masking Service]
-        GUARD[Guardrail Service<br/>Prompt Injection Detection]
+    subgraph Observability
+        TRACE[Tracing + Metrics]
+        AUDIT[Audit Log]
     end
 
-    subgraph "Observability & Audit"
-        TRACE[Distributed Tracing<br/>OpenTelemetry + Jaeger]
-        LOG[Centralized Logging<br/>ELK / Datadog]
-        METRICS[Metrics<br/>Prometheus + Grafana]
-        AUDIT[Audit Log<br/>Immutable Store]
-        FB[Feedback Service]
-    end
-
-    subgraph "Async Infrastructure"
-        MQ[Message Queue<br/>Kafka / SQS]
-        SYNC[Schema Sync Worker<br/>Scheduled Jobs]
-    end
-
-    %% Client to Gateway
-    UI --> GW
-    API_CLIENT --> GW
-    SLACK --> GW
-
-    %% Gateway to Backend
-    GW --> AUTH
-    GW --> RL
-    AUTH --> ORCH
-
-    %% Backend to Agent Engine
-    ORCH --> CONV
+    UI & API_CLIENT & SLACK --> GW --> AUTH --> ORCH
     ORCH --> CACHE_SVC
     ORCH --> LG
-    LG --> CKPT
-
-    %% Agent Pipeline Flow
-    INTENT --> SCHEMA
-    SCHEMA --> SQL_GEN
-    SQL_GEN --> VALIDATOR
-    VALIDATOR --> EXECUTOR
-    EXECUTOR --> FORMATTER
-
-    %% Agents to LLM
-    INTENT --> LLM_GW
-    SCHEMA --> LLM_GW
-    SQL_GEN --> LLM_GW
-    VALIDATOR --> LLM_GW
-    FORMATTER --> LLM_GW
-    LLM_GW --> LLM1
-    LLM_GW --> LLM2
-    LLM_GW --> LLM3
-
-    %% Agents to Knowledge
-    SCHEMA --> VS
-    SCHEMA --> META_DB
-    SCHEMA --> BG
-    INTENT --> QH
-    VS --> EMB
-
-    %% Execution
-    EXECUTOR --> PROXY
-    PROXY --> QG
-    QG --> CONN
-    CONN --> DW1
-    CONN --> DW2
-    CONN --> DW3
-
-    %% Security
+    LG --> INTENT --> SCHEMA --> SQL_GEN --> VALIDATOR --> EXECUTOR --> FORMATTER
+    INTENT & SCHEMA & SQL_GEN --> LLM_GW
+    SCHEMA --> VS & META_DB & BG
+    EXECUTOR --> PROXY --> DW
     ORCH --> RBAC_SVC
     VALIDATOR --> GUARD
-    EXECUTOR --> PII
-    FORMATTER --> MASK
-
-    %% Observability
     LG --> TRACE
-    ORCH --> LOG
-    ORCH --> METRICS
     ORCH --> AUDIT
-    FORMATTER --> FB
-
-    %% Async
-    SYNC --> META_DB
-    SYNC --> VS
-    MQ --> SYNC
 ```
 
 ### Component Responsibilities
@@ -639,79 +558,31 @@ These are implemented as parallel tool calls within the respective agent nodes, 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant GW as API Gateway
-    participant Auth as Auth Service
+    participant GW as Gateway
     participant Orch as Orchestrator
-    participant LG as LangGraph
     participant Intent as Intent Agent
     participant Schema as Schema Agent
     participant SQLGen as SQL Generator
     participant Val as Validator
-    participant Exec as Executor
+    participant DW as Warehouse
     participant Fmt as Formatter
-    participant DW as Snowflake
-    participant VS as Vector Store
-    participant Meta as Metadata Store
-    participant Audit as Audit Log
 
-    U->>GW: POST /query "Top 10 customers by revenue in Europe"
-    GW->>Auth: Validate JWT token
-    Auth-->>GW: User: analyst@corp.com, Role: data_analyst, Org: sales_team
-    GW->>Orch: Forward authenticated request
-
-    Note over Orch: Check semantic cache → miss
-
-    Orch->>LG: Initialize graph with state
-    Orch->>Audit: Log query received
-
-    LG->>Intent: Run intent agent
-    Note over Intent: Parse: intent=ranking, entity=customers,<br/>metric=revenue, filter=region:Europe,<br/>limit=10, sort=desc
-
-    Intent-->>LG: IntentResult{...}
-
-    LG->>Schema: Run schema agent
-    Schema->>VS: Semantic search: "customers revenue Europe"
-    VS-->>Schema: Top 20 candidate tables
-    Schema->>Meta: Get FK relationships for candidates
-    Meta-->>Schema: Join paths
-    Schema->>Schema: RBAC filter → remove restricted tables
-    Schema->>Schema: Rerank → select top tables
-
-    Note over Schema: Selected:<br/>dim_customers (customer_id, name, region)<br/>fact_orders (order_id, customer_id, revenue_usd, order_date)<br/>Join: fact_orders.customer_id = dim_customers.customer_id
-
-    Schema-->>LG: SchemaResult{3 tables, 8 columns, 1 join path}
-
-    LG->>SQLGen: Run SQL generator
-    Note over SQLGen: Retrieve 3 similar few-shot examples<br/>from query history
-
-    Note over SQLGen: Generate SQL with focused schema context
-
-    SQLGen-->>LG: SQL + explanation + confidence=0.92
-
-    LG->>Val: Run validator
-    Note over Val: ✓ Parse SQL AST<br/>✓ All tables exist<br/>✓ All columns exist<br/>✓ User has access to all tables<br/>✓ No DML/DDL<br/>✓ Has LIMIT 10<br/>✓ Estimated scan: 2GB < 10TB threshold<br/>✓ No PII columns in SELECT
-
-    Val-->>LG: Valid, safe, no approval needed
-
-    LG->>Exec: Run executor
-    Exec->>DW: Execute via read-only proxy
-    Note over DW: SELECT c.name, SUM(o.revenue_usd) as total_revenue<br/>FROM fact_orders o<br/>JOIN dim_customers c ON o.customer_id = c.customer_id<br/>WHERE c.region = 'Europe'<br/>GROUP BY c.name<br/>ORDER BY total_revenue DESC<br/>LIMIT 10
-
-    DW-->>Exec: 10 rows, 245ms
-
-    Exec-->>LG: ResultSet{10 rows, 245ms}
-
-    LG->>Fmt: Run formatter
-    Note over Fmt: ✓ PII scan: clean<br/>✓ Format currency values<br/>✓ Generate NL summary<br/>✓ Suggest bar chart
-
-    Fmt-->>LG: FormattedResponse
-
-    LG-->>Orch: Final state
-    Orch->>Audit: Log SQL, results summary, latency
-    Orch->>U: Response with answer + table + SQL + chart suggestion
-
-    U->>Orch: 👍 (feedback)
-    Orch->>Audit: Log positive feedback
+    U->>GW: "Top 10 customers by revenue in Europe"
+    GW->>Orch: Authenticated request
+    Note over Orch: Cache miss
+    Orch->>Intent: Parse query
+    Note over Intent: intent=ranking, metric=revenue, filter=Europe
+    Intent-->>Schema: IntentResult
+    Schema-->>Schema: Vector search + RBAC filter + rerank
+    Note over Schema: dim_customers + fact_orders selected
+    Schema-->>SQLGen: 3 tables, 8 columns, join paths
+    Note over SQLGen: Few-shot retrieval + SQL generation
+    SQLGen-->>Val: SQL + confidence=0.92
+    Note over Val: AST parse, schema check, safety check — all pass
+    Val-->>DW: Execute via read-only proxy
+    DW-->>Fmt: 10 rows, 245ms
+    Note over Fmt: PII scan + format + NL summary
+    Fmt-->>U: Answer + table + SQL + chart suggestion
 ```
 
 ### Stage-by-Stage Detail
@@ -1425,46 +1296,14 @@ The Validator applies these optimizations:
 ### Security Architecture Overview
 
 ```mermaid
-graph TB
-    subgraph "Layer 1: Perimeter"
-        A1[API Gateway TLS]
-        A2[OAuth2/OIDC Auth]
-        A3[Rate Limiting]
-    end
-
-    subgraph "Layer 2: Input Sanitization"
-        B1[Prompt Injection Detection]
-        B2[Jailbreak Prevention]
-        B3[Input Validation]
-    end
-
-    subgraph "Layer 3: Access Control"
-        C1[RBAC - Role-Based Access]
-        C2[ABAC - Attribute-Based Access]
-        C3[Row-Level Security]
-        C4[Column-Level Security]
-    end
-
-    subgraph "Layer 4: SQL Safety"
-        D1[Read-Only Enforcement]
-        D2[SQL Injection Prevention]
-        D3[Dangerous Query Detection]
-        D4[Cost Guardrails]
-    end
-
-    subgraph "Layer 5: Output Protection"
-        E1[PII Detection]
-        E2[Data Masking]
-        E3[Result Row Limits]
-    end
-
-    subgraph "Layer 6: Audit & Compliance"
-        F1[Immutable Audit Log]
-        F2[Approval Workflows]
-        F3[Compliance Reporting]
-    end
-
-    A1 --> A2 --> A3 --> B1 --> B2 --> B3 --> C1 --> C2 --> C3 --> C4 --> D1 --> D2 --> D3 --> D4 --> E1 --> E2 --> E3 --> F1
+graph LR
+    L1["Layer 1: Perimeter<br/>TLS, OAuth2, Rate Limiting"]
+    L2["Layer 2: Input<br/>Injection Detection, Validation"]
+    L3["Layer 3: Access Control<br/>RBAC, ABAC, Row/Column Security"]
+    L4["Layer 4: SQL Safety<br/>Read-Only, Cost Guardrails"]
+    L5["Layer 5: Output<br/>PII Detection, Data Masking"]
+    L6["Layer 6: Audit<br/>Immutable Log, Approvals"]
+    L1 --> L2 --> L3 --> L4 --> L5 --> L6
 ```
 
 ### Guardrail Details
@@ -2168,35 +2007,13 @@ class GoldenQuery:
 ### Automated Evaluation Pipeline
 
 ```mermaid
-graph TB
-    subgraph "Trigger"
-        PR[Pull Request\nPrompt or model change] --> EVAL
-        NIGHTLY[Nightly Schedule] --> EVAL
-        SCHEMA_CHANGE[Schema Change\nPost-sync] --> EVAL_SUBSET
-    end
-
-    subgraph "Evaluation Pipeline"
-        EVAL[Load Golden Dataset] --> RUN[Run NL→SQL Pipeline\nfor each golden query]
-        EVAL_SUBSET[Load Affected Queries] --> RUN
-        RUN --> COMPARE[Compare Results]
-    end
-
-    subgraph "Comparison"
-        COMPARE --> TABLE_CHECK[Table Selection\nRecall & Precision]
-        COMPARE --> SQL_CHECK[SQL Execution\nResult Set Comparison]
-        COMPARE --> INTENT_CHECK[Intent Parse\nAccuracy]
-        COMPARE --> LATENCY_CHECK[Latency\np50, p95, p99]
-    end
-
-    subgraph "Reporting"
-        TABLE_CHECK --> REPORT[Evaluation Report]
-        SQL_CHECK --> REPORT
-        INTENT_CHECK --> REPORT
-        LATENCY_CHECK --> REPORT
-        REPORT --> GATE{Quality Gate}
-        GATE -->|Pass| APPROVE[Approve Change]
-        GATE -->|Fail| BLOCK[Block Deployment\nNotify Author]
-    end
+graph LR
+    TRIGGER["Trigger:<br/>PR / Nightly / Schema Change"] --> EVAL[Load Golden Dataset]
+    EVAL --> RUN[Run NL-to-SQL Pipeline]
+    RUN --> COMPARE[Compare: Table Selection,<br/>SQL Accuracy, Intent, Latency]
+    COMPARE --> GATE{Quality Gate}
+    GATE -->|Pass| APPROVE[Approve]
+    GATE -->|Fail| BLOCK[Block + Notify]
 ```
 
 **Quality gates for deployment:**
@@ -2265,22 +2082,12 @@ class ABTestConfig:
 ### Continuous Improvement Flywheel
 
 ```mermaid
-graph TD
-    PROD[Production Queries] --> FEEDBACK[User Feedback\nThumbs up/down + corrections]
-    FEEDBACK -->|Positive| CANDIDATE[Candidate for\nGolden Dataset]
-    FEEDBACK -->|Negative| REVIEW[Weekly Review\nby Data Team]
-    CANDIDATE --> VERIFY[Manual Verification] --> GOLDEN[Add to Golden Dataset]
-    REVIEW --> ROOT_CAUSE[Root Cause Analysis]
-    ROOT_CAUSE -->|Missing glossary term| GLOSSARY_UPDATE[Update Glossary]
-    ROOT_CAUSE -->|Bad table description| META_UPDATE[Update Metadata]
-    ROOT_CAUSE -->|Prompt issue| PROMPT_UPDATE[Update Prompt]
-    ROOT_CAUSE -->|Missing example| EXAMPLE_ADD[Add Few-Shot Example]
-    GLOSSARY_UPDATE --> EVAL_PIPELINE[Run Evaluation Pipeline]
-    META_UPDATE --> EVAL_PIPELINE
-    PROMPT_UPDATE --> EVAL_PIPELINE
-    EXAMPLE_ADD --> EVAL_PIPELINE
-    EVAL_PIPELINE -->|Quality gate passes| DEPLOY[Deploy to Production]
-    DEPLOY --> PROD
+graph LR
+    PROD[Production] --> FEEDBACK[User Feedback]
+    FEEDBACK -->|Positive| GOLDEN[Add to Golden Dataset]
+    FEEDBACK -->|Negative| FIX[Fix: Glossary / Metadata / Prompt]
+    FIX --> EVAL[Run Eval Pipeline]
+    EVAL -->|Pass| PROD
 ```
 
 This creates a **virtuous cycle**: production usage generates feedback → feedback improves the system → improved system generates better results → users provide more positive feedback.
